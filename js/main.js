@@ -40,7 +40,7 @@ class Game {
         // Energy system
         this.energy = 1.0; // 0-1
         this.maxEnergy = 1.0;
-        this.energyLossPerCollision = 0.06; // Lose ~6% per collision (about 16 hits to game over)
+        this.energyLossPerCollision = 0.03; // Lose ~3% per collision (about 33 hits to game over)
 
         // Time system
         this.timeLimit = 180; // 3 minutes in seconds

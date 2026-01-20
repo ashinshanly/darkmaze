@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="description"
         content="Invisible Maze — Navigate through absence made visible. An interactive visual art experience.">
     <meta name="theme-color" content="#0a0a1a">
@@ -92,8 +92,36 @@
 
     <!-- Instructions (fades out) -->
     <div id="instructions">
-        <p>Arrow keys or WASD to navigate</p>
+        <p class="desktop-hint">Arrow keys or WASD to navigate</p>
+        <p class="mobile-hint">Use the controls below to navigate</p>
         <p class="subtle">The origin pulses behind you. The exit beckons ahead.</p>
+    </div>
+
+    <!-- Mobile Touch Controls -->
+    <div id="mobileControls">
+        <button class="control-btn" id="btnUp" aria-label="Move Up">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 19V5M5 12l7-7 7 7" />
+            </svg>
+        </button>
+        <div class="control-row">
+            <button class="control-btn" id="btnLeft" aria-label="Move Left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 5l-7 7 7 7" />
+                </svg>
+            </button>
+            <div class="control-center"></div>
+            <button class="control-btn" id="btnRight" aria-label="Move Right">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+            </button>
+        </div>
+        <button class="control-btn" id="btnDown" aria-label="Move Down">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12l7 7 7-7" />
+            </svg>
+        </button>
     </div>
 
     <script type="module" src="js/main.js"></script>

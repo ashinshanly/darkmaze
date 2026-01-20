@@ -85,6 +85,9 @@ class Game {
             this.restart();
         });
 
+        // Mobile touch controls
+        this.setupMobileControls();
+
         // Initialize audio on first click/key
         const initAudio = () => {
             this.audio.init();
@@ -93,6 +96,79 @@ class Game {
         };
         document.addEventListener('click', initAudio);
         document.addEventListener('keydown', initAudio);
+    }
+
+    /**
+     * Setup mobile touch controls
+     */
+    setupMobileControls() {
+        const controls = {
+            btnUp: { direction: 'n', dx: 0, dy: -1 },
+            btnDown: { direction: 's', dx: 0, dy: 1 },
+            btnLeft: { direction: 'w', dx: -1, dy: 0 },
+            btnRight: { direction: 'e', dx: 1, dy: 0 }
+        };
+
+        Object.entries(controls).forEach(([id, { direction, dx, dy }]) => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+
+            // Touch events for mobile
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                btn.classList.add('pressed');
+                this.handleMobileInput(direction, dx, dy);
+            });
+
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                btn.classList.remove('pressed');
+            });
+
+            btn.addEventListener('touchcancel', () => {
+                btn.classList.remove('pressed');
+            });
+
+            // Mouse events for testing on desktop
+            btn.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                btn.classList.add('pressed');
+                this.handleMobileInput(direction, dx, dy);
+            });
+
+            btn.addEventListener('mouseup', () => {
+                btn.classList.remove('pressed');
+            });
+
+            btn.addEventListener('mouseleave', () => {
+                btn.classList.remove('pressed');
+            });
+        });
+    }
+
+    /**
+     * Handle mobile touch input
+     */
+    handleMobileInput(direction, dx, dy) {
+        if (this.state !== 'playing' || !this.inputEnabled) return;
+        if (!this.player.canAcceptInput()) return;
+
+        // First move - fade instructions and show HUD
+        if (!this.hasMovedOnce) {
+            this.hasMovedOnce = true;
+            this.instructions.classList.add('fade-out');
+            this.hud.classList.add('visible');
+            this.startTime = Date.now();
+        }
+
+        // Check if move is blocked
+        const blocked = this.maze.canMove(this.player.gridX, this.player.gridY, direction);
+
+        if (blocked) {
+            this.handleCollision(direction, dx, dy);
+        } else {
+            this.handleMove(dx, dy);
+        }
     }
 
     /**

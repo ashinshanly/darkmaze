@@ -658,6 +658,7 @@ body.time-phase-3 {
         min-width: 60px;
     }
 }
+
 /* ============================================
    LEADERBOARD STYLES
    ============================================ */
@@ -734,8 +735,208 @@ body.time-phase-3 {
         margin-top: 30px;
         padding: 15px 20px;
     }
-    
+
     .leaderboard-entry {
         gap: 10px;
+    }
+}
+
+/* ============================================
+   MOBILE TOUCH CONTROLS
+   ============================================ */
+
+#mobileControls {
+    position: fixed;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    z-index: 300;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.control-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.control-center {
+    width: 52px;
+    height: 52px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.02) 0%, transparent 70%);
+    border-radius: 12px;
+}
+
+.control-btn {
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(20, 20, 40, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    color: rgba(255, 255, 255, 0.75);
+    cursor: pointer;
+    transition: all 0.12s ease;
+    touch-action: manipulation;
+}
+
+.control-btn svg {
+    width: 22px;
+    height: 22px;
+}
+
+.control-btn:active,
+.control-btn.pressed {
+    background: rgba(80, 100, 180, 0.5);
+    border-color: rgba(150, 180, 255, 0.5);
+    color: rgba(255, 255, 255, 1);
+    transform: scale(0.9);
+    box-shadow: 0 0 25px rgba(120, 160, 255, 0.25), inset 0 0 15px rgba(150, 180, 255, 0.15);
+}
+
+.control-btn:focus {
+    outline: none;
+}
+
+/* Prevent text selection on touch controls */
+#mobileControls * {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Desktop vs Mobile instruction hints - default state */
+.mobile-hint {
+    display: none;
+}
+
+/* Show mobile controls on touch devices */
+@media (hover: none) and (pointer: coarse) {
+    #mobileControls {
+        display: flex;
+    }
+
+    body {
+        cursor: auto;
+    }
+
+    body::after {
+        display: none;
+    }
+
+    .desktop-hint {
+        display: none;
+    }
+
+    .mobile-hint {
+        display: block;
+    }
+
+    #instructions {
+        bottom: auto;
+        top: 50%;
+        transform: translateY(-50%);
+        padding: 0 20px;
+    }
+
+    #instructions p {
+        font-size: 0.75rem;
+    }
+}
+
+/* Also show on narrow screens as fallback */
+@media (max-width: 768px) {
+    #mobileControls {
+        display: flex;
+    }
+
+    body {
+        cursor: auto;
+    }
+
+    body::after {
+        display: none;
+    }
+
+    .desktop-hint {
+        display: none;
+    }
+
+    .mobile-hint {
+        display: block;
+    }
+
+    /* Instructions centered on screen, above controls */
+    #instructions {
+        bottom: auto;
+        top: 50%;
+        transform: translateY(-50%);
+        padding: 0 20px;
+    }
+
+    #instructions p {
+        font-size: 0.75rem;
+    }
+
+    /* HUD adjustments for mobile */
+    #hud {
+        top: 15px;
+        padding: 8px 16px;
+        gap: 12px;
+    }
+
+    .hud-value {
+        font-size: 1rem;
+    }
+
+    .hud-label {
+        font-size: 0.5rem;
+    }
+
+    .energy-bar {
+        width: 50px;
+        height: 6px;
+    }
+
+    .energy-item {
+        min-width: 50px;
+    }
+
+    .hud-divider {
+        height: 24px;
+    }
+}
+
+/* Extra small screens */
+@media (max-width: 375px) {
+    .control-btn {
+        width: 48px;
+        height: 48px;
+    }
+
+    .control-center {
+        width: 48px;
+        height: 48px;
+    }
+
+    .control-btn svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    #mobileControls {
+        gap: 2px;
+    }
+
+    .control-row {
+        gap: 2px;
     }
 }

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Invisible Maze — Navigate through absence made visible. An interactive visual art experience.">
+    <meta name="theme-color" content="#0a0a1a">
+    <title>Invisible Maze</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Overlay for distortion effects -->
+    <div id="effectsOverlay"></div>
+
+    <!-- Live HUD - minimal floating stats -->
+    <div id="hud">
+        <div class="hud-item">
+            <span class="hud-value" id="hudMoves">0</span>
+            <span class="hud-label">moves</span>
+        </div>
+        <div class="hud-divider"></div>
+        <div class="hud-item">
+            <span class="hud-value" id="hudTime">3:00</span>
+            <span class="hud-label">remaining</span>
+        </div>
+        <div class="hud-divider"></div>
+        <div class="hud-item energy-item">
+            <div class="energy-bar">
+                <div class="energy-fill" id="energyFill"></div>
+            </div>
+            <span class="hud-label">energy</span>
+        </div>
+    </div>
+
+    <!-- Game Over screen -->
+    <div id="gameOverScreen" class="hidden">
+        <div class="gameover-content">
+            <p class="gameover-quote">"The maze consumed you."</p>
+            <p class="gameover-reason" id="gameOverReason">Your energy faded into the walls.</p>
+            <div class="gameover-stats">
+                <span>You made <strong id="goMoves">0</strong> moves</span>
+            </div>
+            <button id="retryBtn">Try Again</button>
+        </div>
+    </div>
+
+    <!-- Win screen -->
+    <div id="winScreen" class="hidden">
+        <div class="win-content">
+            <p class="win-quote quote-1">"You didn't see the maze."</p>
+            <p class="win-quote quote-2">"You became aware of it."</p>
+            <div class="stats">
+                <div class="stat stat-1"><span class="stat-label">Moves</span><span class="stat-value"
+                        id="statMoves">0</span></div>
+                <div class="stat stat-2"><span class="stat-label">Collisions</span><span class="stat-value"
+                        id="statCollisions">0</span></div>
+                <div class="stat stat-3"><span class="stat-label">Time</span><span class="stat-value"
+                        id="statTime">0:00</span></div>
+            </div>
+            <button id="restartBtn">Enter Again</button>
+        </div>
+    </div>
+
+    <!-- Instructions (fades out) -->
+    <div id="instructions">
+        <p>Arrow keys or WASD to navigate</p>
+        <p class="subtle">The origin pulses behind you. The exit beckons ahead.</p>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+
+</html>

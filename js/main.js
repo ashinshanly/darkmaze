@@ -24,6 +24,11 @@ class Game {
         this.hudTime = document.getElementById('hudTime');
         this.energyFill = document.getElementById('energyFill');
 
+        // Combo UI elements
+        this.comboCounter = document.getElementById('comboCounter');
+        this.comboValue = document.getElementById('comboValue');
+        this.messagePopup = document.getElementById('messagePopup');
+
         // Initialize systems
         this.maze = new Maze(10, 10);
         this.player = new Player(0, 0);
@@ -47,6 +52,17 @@ class Game {
         this.startTime = Date.now();
         this.elapsedTime = 0;
         this.remainingTime = this.timeLimit;
+
+        // Combo system
+        this.combo = 0;
+        this.maxCombo = 0;
+        this.lastMessageTime = 0;
+        this.messages = [
+            { threshold: 3, texts: ['Nice!', 'Good!', 'Smooth!'] },
+            { threshold: 5, texts: ['Great!', 'On fire!', 'Impressive!'] },
+            { threshold: 10, texts: ['Amazing!', 'Unstoppable!', 'Legend!'] },
+            { threshold: 15, texts: ['Incredible!', 'Master!', 'Godlike!'] }
+        ];
 
         // Input state
         this.inputEnabled = true;
@@ -247,6 +263,11 @@ class Game {
         this.player.addGhost();
         this.player.moveCount++;
 
+        // Increment combo
+        this.combo++;
+        if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+        this.updateComboUI();
+
         // Play move sound
         this.audio.playMove();
 
@@ -263,6 +284,13 @@ class Game {
         // Bounce player
         this.player.bounce({ x: dx, y: dy });
         this.player.collisionCount++;
+
+        // Reset combo
+        this.combo = 0;
+        this.updateComboUI();
+
+        // Add wall memory
+        this.renderer.addWallMemory(this.player.gridX, this.player.gridY, direction);
 
         // Lose energy
         this.energy = Math.max(0, this.energy - this.energyLossPerCollision);
@@ -351,6 +379,69 @@ class Game {
         } else {
             this.hud.classList.add('urgency-high');
         }
+    }
+
+    /**
+     * Update combo counter UI
+     */
+    updateComboUI() {
+        if (!this.comboCounter || !this.comboValue) return;
+
+        if (this.combo >= 3) {
+            this.comboCounter.classList.add('visible');
+            this.comboValue.textContent = this.combo;
+
+            // Add pulse animation
+            this.comboCounter.classList.remove('pulse');
+            void this.comboCounter.offsetWidth;
+            this.comboCounter.classList.add('pulse');
+
+            // Check for motivational message
+            this.checkComboMessage();
+        } else {
+            this.comboCounter.classList.remove('visible');
+        }
+    }
+
+    /**
+     * Check and show motivational message for combo milestones
+     */
+    checkComboMessage() {
+        const now = Date.now();
+        // Don't spam messages - at least 2 seconds between
+        if (now - this.lastMessageTime < 2000) return;
+
+        // Find highest threshold we've hit
+        let message = null;
+        for (let i = this.messages.length - 1; i >= 0; i--) {
+            if (this.combo === this.messages[i].threshold) {
+                const texts = this.messages[i].texts;
+                message = texts[Math.floor(Math.random() * texts.length)];
+                break;
+            }
+        }
+
+        if (message) {
+            this.showMessage(message);
+            this.lastMessageTime = now;
+        }
+    }
+
+    /**
+     * Show motivational message popup
+     */
+    showMessage(text) {
+        if (!this.messagePopup) return;
+
+        this.messagePopup.textContent = text;
+        this.messagePopup.classList.remove('visible');
+        void this.messagePopup.offsetWidth;
+        this.messagePopup.classList.add('visible');
+
+        // Auto-hide after animation
+        setTimeout(() => {
+            this.messagePopup.classList.remove('visible');
+        }, 1500);
     }
 
     /**
@@ -457,6 +548,14 @@ class Game {
         this.remainingTime = this.timeLimit;
         this.hudTime.textContent = '3:00';
 
+        // Reset combo
+        this.combo = 0;
+        this.maxCombo = 0;
+        this.updateComboUI();
+
+        // Clear wall memory
+        this.renderer.clearWallMemory();
+
         // Hide screens
         this.winScreen.classList.remove('visible');
         this.gameOverScreen.classList.remove('visible');
@@ -539,8 +638,11 @@ class Game {
         // Background
         this.renderer.renderBackground(currentTime);
 
-        // Light rays (bent by player)
-        this.renderer.renderLightRays(currentTime, playerScreenX, playerScreenY);
+        // Starfield
+        this.renderer.renderStarfield(currentTime);
+
+        // Wall memory hints
+        this.renderer.renderWallMemory();
 
         // Start point marker (only if not at start and game is playing)
         if (this.state === 'playing' || this.state === 'winning') {

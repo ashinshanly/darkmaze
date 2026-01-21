@@ -20,8 +20,11 @@ export class Renderer {
         // Animation state
         this.time = 0;
 
-        // Light rays
-        this.lightRays = this.createLightRays();
+        // Starfield
+        this.stars = this.createStarfield();
+
+        // Wall memory - cells where player hit walls
+        this.wallMemory = new Map();
 
         // Background gradient animation
         this.gradientPhase = 0;
@@ -38,7 +41,7 @@ export class Renderer {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
         this.calculateLayout();
-        this.lightRays = this.createLightRays();
+        this.stars = this.createStarfield();
     }
 
     /**
@@ -76,22 +79,27 @@ export class Renderer {
     }
 
     /**
-     * Create light rays for background effect
+     * Create starfield for background
      */
-    createLightRays() {
-        const rays = [];
-        const count = 5;
+    createStarfield() {
+        const stars = [];
+        const count = 80;
 
         for (let i = 0; i < count; i++) {
-            rays.push({
-                angle: (Math.PI * 2 * i) / count,
-                width: 0.1 + Math.random() * 0.2,
-                opacity: 0.02 + Math.random() * 0.02,
-                speed: 0.0002 + Math.random() * 0.0003
+            stars.push({
+                x: Math.random() * this.canvas.width,
+                y: Math.random() * this.canvas.height,
+                size: 0.5 + Math.random() * 2,
+                baseOpacity: 0.2 + Math.random() * 0.4,
+                twinkleSpeed: 0.5 + Math.random() * 2,
+                twinklePhase: Math.random() * Math.PI * 2,
+                // Color variation: white to slight blue/purple
+                hue: 220 + Math.random() * 40,
+                saturation: 10 + Math.random() * 30
             });
         }
 
-        return rays;
+        return stars;
     }
 
     /**
@@ -131,135 +139,262 @@ export class Renderer {
     }
 
     /**
-     * Render the START point - pulsing origin marker
+     * Render the START point - outward swirling portal vortex (blue/cyan)
      */
     renderStartPoint(startX, startY) {
         const pos = this.gridToScreen(startX, startY);
         const time = performance.now() / 1000;
 
-        // Gentle pulsing rings emanating outward
-        const pulseCount = 3;
+        // Spiral arms pushing outward
+        const armCount = 5;
+        const maxRadius = 50;
 
-        for (let i = 0; i < pulseCount; i++) {
-            const phase = (time * 0.5 + i / pulseCount) % 1;
-            const radius = 15 + phase * 40;
-            const opacity = (1 - phase) * 0.15;
+        this.ctx.save();
+        this.ctx.translate(pos.x, pos.y);
 
-            this.ctx.beginPath();
-            this.ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
-            this.ctx.strokeStyle = `rgba(100, 150, 255, ${opacity})`;
-            this.ctx.lineWidth = 2;
-            this.ctx.stroke();
+        // Rotating spiral arms
+        for (let arm = 0; arm < armCount; arm++) {
+            const baseAngle = (arm / armCount) * Math.PI * 2;
+
+            // Draw spiral particles along each arm
+            for (let i = 0; i < 12; i++) {
+                const t = i / 12;
+                const radius = 8 + t * maxRadius;
+                // Spiral outward with rotation over time (pushing out effect)
+                const spiralAngle = baseAngle + t * 1.5 - time * 1.2;
+
+                const x = Math.cos(spiralAngle) * radius;
+                const y = Math.sin(spiralAngle) * radius;
+
+                const opacity = (1 - t) * 0.6;
+                const size = (1 - t * 0.5) * 3;
+
+                // Particle glow
+                const gradient = this.ctx.createRadialGradient(x, y, 0, x, y, size * 3);
+                gradient.addColorStop(0, `rgba(100, 180, 255, ${opacity})`);
+                gradient.addColorStop(0.5, `rgba(80, 150, 255, ${opacity * 0.4})`);
+                gradient.addColorStop(1, 'rgba(60, 120, 255, 0)');
+
+                this.ctx.fillStyle = gradient;
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, size * 3, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
         }
 
-        // Soft inner glow
-        const innerGlow = this.ctx.createRadialGradient(
-            pos.x, pos.y, 0,
-            pos.x, pos.y, 25
-        );
-        innerGlow.addColorStop(0, 'rgba(100, 150, 255, 0.15)');
-        innerGlow.addColorStop(0.5, 'rgba(80, 120, 200, 0.08)');
-        innerGlow.addColorStop(1, 'rgba(60, 100, 180, 0)');
+        // Central portal core
+        const coreGradient = this.ctx.createRadialGradient(0, 0, 0, 0, 0, 20);
+        const corePulse = 0.8 + Math.sin(time * 3) * 0.2;
+        coreGradient.addColorStop(0, `rgba(150, 200, 255, ${0.5 * corePulse})`);
+        coreGradient.addColorStop(0.5, `rgba(100, 150, 255, ${0.25 * corePulse})`);
+        coreGradient.addColorStop(1, 'rgba(80, 120, 255, 0)');
 
-        this.ctx.fillStyle = innerGlow;
+        this.ctx.fillStyle = coreGradient;
         this.ctx.beginPath();
-        this.ctx.arc(pos.x, pos.y, 25, 0, Math.PI * 2);
+        this.ctx.arc(0, 0, 20, 0, Math.PI * 2);
         this.ctx.fill();
+
+        // Inner bright core
+        this.ctx.fillStyle = `rgba(200, 230, 255, ${0.7 * corePulse})`;
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, 5, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        this.ctx.restore();
     }
 
     /**
-     * Render the END point - beckoning golden glow
+     * Render the END point - inward swirling portal vortex (golden)
      */
     renderEndPoint(endX, endY) {
         const pos = this.gridToScreen(endX, endY);
         const time = performance.now() / 1000;
 
-        // Beckoning pulse - breathing effect
-        const breathe = 0.7 + Math.sin(time * 1.5) * 0.3;
-        const radius = 35 * breathe;
+        // Spiral arms pulling inward
+        const armCount = 5;
+        const maxRadius = 60;
 
-        // Outer warm glow
-        const outerGlow = this.ctx.createRadialGradient(
-            pos.x, pos.y, 0,
-            pos.x, pos.y, radius * 2
-        );
-        outerGlow.addColorStop(0, `rgba(255, 200, 100, ${0.2 * breathe})`);
-        outerGlow.addColorStop(0.4, `rgba(255, 180, 80, ${0.1 * breathe})`);
+        this.ctx.save();
+        this.ctx.translate(pos.x, pos.y);
+
+        // Outer beckoning glow
+        const outerGlow = this.ctx.createRadialGradient(0, 0, 0, 0, 0, maxRadius * 1.5);
+        const breathe = 0.7 + Math.sin(time * 1.5) * 0.3;
+        outerGlow.addColorStop(0, `rgba(255, 200, 100, ${0.15 * breathe})`);
+        outerGlow.addColorStop(0.5, `rgba(255, 180, 80, ${0.05 * breathe})`);
         outerGlow.addColorStop(1, 'rgba(255, 150, 50, 0)');
 
         this.ctx.fillStyle = outerGlow;
         this.ctx.beginPath();
-        this.ctx.arc(pos.x, pos.y, radius * 2, 0, Math.PI * 2);
+        this.ctx.arc(0, 0, maxRadius * 1.5, 0, Math.PI * 2);
         this.ctx.fill();
 
-        // Inner core glow
-        const innerGlow = this.ctx.createRadialGradient(
-            pos.x, pos.y, 0,
-            pos.x, pos.y, radius * 0.5
-        );
-        innerGlow.addColorStop(0, `rgba(255, 230, 180, ${0.3 * breathe})`);
-        innerGlow.addColorStop(1, 'rgba(255, 200, 100, 0)');
+        // Rotating spiral arms (pulling inward)
+        for (let arm = 0; arm < armCount; arm++) {
+            const baseAngle = (arm / armCount) * Math.PI * 2;
 
-        this.ctx.fillStyle = innerGlow;
+            // Draw spiral particles along each arm
+            for (let i = 0; i < 15; i++) {
+                const t = i / 15;
+                const radius = maxRadius - t * (maxRadius - 8);
+                // Spiral inward with rotation over time (pulling in effect)
+                const spiralAngle = baseAngle - t * 2 + time * 1.5;
+
+                const x = Math.cos(spiralAngle) * radius;
+                const y = Math.sin(spiralAngle) * radius;
+
+                const opacity = t * 0.7;
+                const size = (0.5 + t * 0.8) * 3;
+
+                // Particle glow
+                const gradient = this.ctx.createRadialGradient(x, y, 0, x, y, size * 3);
+                gradient.addColorStop(0, `rgba(255, 220, 120, ${opacity})`);
+                gradient.addColorStop(0.5, `rgba(255, 180, 80, ${opacity * 0.4})`);
+                gradient.addColorStop(1, 'rgba(255, 150, 50, 0)');
+
+                this.ctx.fillStyle = gradient;
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, size * 3, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+        }
+
+        // Central portal core - brighter and more inviting
+        const coreGradient = this.ctx.createRadialGradient(0, 0, 0, 0, 0, 25);
+        const corePulse = 0.8 + Math.sin(time * 2.5) * 0.2;
+        coreGradient.addColorStop(0, `rgba(255, 240, 180, ${0.7 * corePulse})`);
+        coreGradient.addColorStop(0.4, `rgba(255, 200, 100, ${0.4 * corePulse})`);
+        coreGradient.addColorStop(1, 'rgba(255, 180, 80, 0)');
+
+        this.ctx.fillStyle = coreGradient;
         this.ctx.beginPath();
-        this.ctx.arc(pos.x, pos.y, radius * 0.5, 0, Math.PI * 2);
+        this.ctx.arc(0, 0, 25, 0, Math.PI * 2);
         this.ctx.fill();
 
-        // Subtle rotating sparkles
-        const sparkleCount = 4;
-        for (let i = 0; i < sparkleCount; i++) {
-            const angle = (time * 0.3) + (Math.PI * 2 * i / sparkleCount);
-            const sparkleRadius = radius * 1.2;
-            const sparkleX = pos.x + Math.cos(angle) * sparkleRadius;
-            const sparkleY = pos.y + Math.sin(angle) * sparkleRadius;
-            const sparkleOpacity = 0.3 + Math.sin(time * 2 + i) * 0.2;
+        // Inner bright core
+        this.ctx.fillStyle = `rgba(255, 250, 220, ${0.9 * corePulse})`;
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, 7, 0, Math.PI * 2);
+        this.ctx.fill();
 
+        this.ctx.restore();
+    }
+
+    /**
+     * Render twinkling starfield
+     */
+    renderStarfield(time) {
+        const t = time / 1000;
+
+        for (const star of this.stars) {
+            // Twinkling effect
+            const twinkle = Math.sin(t * star.twinkleSpeed + star.twinklePhase);
+            const opacity = star.baseOpacity * (0.5 + twinkle * 0.5);
+
+            // Draw star with slight glow
+            const gradient = this.ctx.createRadialGradient(
+                star.x, star.y, 0,
+                star.x, star.y, star.size * 3
+            );
+
+            gradient.addColorStop(0, `hsla(${star.hue}, ${star.saturation}%, 90%, ${opacity})`);
+            gradient.addColorStop(0.5, `hsla(${star.hue}, ${star.saturation}%, 80%, ${opacity * 0.3})`);
+            gradient.addColorStop(1, `hsla(${star.hue}, ${star.saturation}%, 70%, 0)`);
+
+            this.ctx.fillStyle = gradient;
             this.ctx.beginPath();
-            this.ctx.arc(sparkleX, sparkleY, 2, 0, Math.PI * 2);
-            this.ctx.fillStyle = `rgba(255, 220, 150, ${sparkleOpacity})`;
+            this.ctx.arc(star.x, star.y, star.size * 3, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            // Bright core
+            this.ctx.fillStyle = `hsla(${star.hue}, ${star.saturation}%, 95%, ${opacity})`;
+            this.ctx.beginPath();
+            this.ctx.arc(star.x, star.y, star.size * 0.5, 0, Math.PI * 2);
             this.ctx.fill();
         }
     }
 
     /**
-     * Render light rays with time-based intensity
+     * Add wall memory - mark a cell where player hit a wall
      */
-    renderLightRays(time, playerScreenX, playerScreenY) {
-        const centerX = this.canvas.width / 2;
-        const centerY = this.canvas.height / 2;
+    addWallMemory(gridX, gridY, direction) {
+        const key = `${gridX},${gridY},${direction}`;
+        this.wallMemory.set(key, {
+            gridX,
+            gridY,
+            direction,
+            intensity: 1.0,
+            timestamp: performance.now()
+        });
+    }
 
-        for (const ray of this.lightRays) {
-            ray.angle += ray.speed * (time / 16);
+    /**
+     * Render wall memory hints - subtle red pulses where walls were hit
+     */
+    renderWallMemory() {
+        const currentTime = performance.now();
 
-            // Bend rays toward player
-            const dx = playerScreenX - centerX;
-            const dy = playerScreenY - centerY;
-            const bendFactor = 0.1;
+        for (const [key, memory] of this.wallMemory) {
+            // Fade over 10 seconds
+            const age = (currentTime - memory.timestamp) / 1000;
+            const fadeTime = 10;
 
-            const bendAngle = Math.atan2(dy, dx);
-            const effectiveAngle = ray.angle + Math.sin(ray.angle - bendAngle) * bendFactor;
+            if (age > fadeTime) {
+                this.wallMemory.delete(key);
+                continue;
+            }
 
-            this.ctx.save();
-            this.ctx.translate(centerX, centerY);
-            this.ctx.rotate(effectiveAngle);
+            const opacity = (1 - age / fadeTime) * 0.3;
+            const pos = this.gridToScreen(memory.gridX, memory.gridY);
+            const halfCell = this.cellSize / 2;
 
-            // Intensity increases with time
-            const intensity = ray.opacity * this.ambientIntensity;
+            // Determine wall position based on direction
+            let wallX = pos.x;
+            let wallY = pos.y;
+            let width = this.cellSize * 0.1;
+            let height = this.cellSize;
 
-            const gradient = this.ctx.createLinearGradient(0, 0, this.canvas.width, 0);
-            gradient.addColorStop(0, `rgba(100, 120, 180, ${intensity})`);
-            gradient.addColorStop(1, 'rgba(100, 120, 180, 0)');
+            switch (memory.direction) {
+                case 'n':
+                    wallY = pos.y - halfCell;
+                    width = this.cellSize;
+                    height = this.cellSize * 0.1;
+                    break;
+                case 's':
+                    wallY = pos.y + halfCell;
+                    width = this.cellSize;
+                    height = this.cellSize * 0.1;
+                    break;
+                case 'w':
+                    wallX = pos.x - halfCell;
+                    break;
+                case 'e':
+                    wallX = pos.x + halfCell;
+                    break;
+            }
+
+            // Subtle pulsing glow
+            const pulse = 0.7 + Math.sin(currentTime / 500) * 0.3;
+
+            const gradient = this.ctx.createRadialGradient(
+                wallX, wallY, 0,
+                wallX, wallY, this.cellSize * 0.5
+            );
+            gradient.addColorStop(0, `rgba(255, 80, 80, ${opacity * pulse})`);
+            gradient.addColorStop(1, 'rgba(255, 80, 80, 0)');
 
             this.ctx.fillStyle = gradient;
             this.ctx.beginPath();
-            this.ctx.moveTo(0, 0);
-            this.ctx.lineTo(this.canvas.width, -this.canvas.width * ray.width);
-            this.ctx.lineTo(this.canvas.width, this.canvas.width * ray.width);
-            this.ctx.closePath();
+            this.ctx.arc(wallX, wallY, this.cellSize * 0.5, 0, Math.PI * 2);
             this.ctx.fill();
-
-            this.ctx.restore();
         }
+    }
+
+    /**
+     * Clear wall memory on restart
+     */
+    clearWallMemory() {
+        this.wallMemory.clear();
     }
 
     /**

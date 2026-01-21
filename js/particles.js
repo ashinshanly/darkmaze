@@ -93,13 +93,32 @@ export class ParticleSystem {
     }
 
     /**
-     * Render all particles
+     * Render all particles - firefly style with glow
      */
     render(ctx) {
         for (const particle of this.particles) {
+            // Firefly glow effect
+            const glowRadius = particle.size * 4;
+            const gradient = ctx.createRadialGradient(
+                particle.x, particle.y, 0,
+                particle.x, particle.y, glowRadius
+            );
+
+            // Warm firefly colors with slight variation
+            const hue = 180 + Math.sin(particle.phase) * 40; // Cyan to green range
+            gradient.addColorStop(0, `hsla(${hue}, 80%, 75%, ${particle.opacity * 0.9})`);
+            gradient.addColorStop(0.4, `hsla(${hue}, 70%, 60%, ${particle.opacity * 0.4})`);
+            gradient.addColorStop(1, `hsla(${hue}, 60%, 50%, 0)`);
+
+            ctx.fillStyle = gradient;
             ctx.beginPath();
-            ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(200, 220, 255, ${particle.opacity})`;
+            ctx.arc(particle.x, particle.y, glowRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Bright core
+            ctx.fillStyle = `hsla(${hue}, 100%, 90%, ${particle.opacity})`;
+            ctx.beginPath();
+            ctx.arc(particle.x, particle.y, particle.size * 0.6, 0, Math.PI * 2);
             ctx.fill();
         }
     }

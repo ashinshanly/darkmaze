@@ -107,6 +107,16 @@ class Game {
             this.restart();
         });
 
+        // Theme toggle button
+        this.themeNameEl = document.getElementById('themeName');
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            this.cycleTheme();
+            // Update button text
+            if (this.themeNameEl) {
+                this.themeNameEl.textContent = this.renderer.themes[this.renderer.getCurrentTheme()].name;
+            }
+        });
+
         // Mobile touch controls
         this.setupMobileControls();
 
@@ -197,6 +207,12 @@ class Game {
      * Handle keyboard input
      */
     handleKeyDown(e) {
+        // Theme switching - works anytime
+        if (e.key === 't' || e.key === 'T') {
+            this.cycleTheme();
+            return;
+        }
+
         if (this.state !== 'playing' || !this.inputEnabled) return;
         if (!this.player.canAcceptInput()) return;
 
@@ -252,6 +268,27 @@ class Game {
             // Valid move
             this.handleMove(dx, dy);
         }
+    }
+
+    /**
+     * Cycle through available themes
+     */
+    cycleTheme() {
+        const themes = this.renderer.getThemeNames();
+        const currentIndex = themes.indexOf(this.renderer.getCurrentTheme());
+        const nextIndex = (currentIndex + 1) % themes.length;
+        const nextTheme = themes[nextIndex];
+
+        this.renderer.setTheme(nextTheme);
+        this.particles.setTheme(nextTheme);
+
+        // Update button text
+        if (this.themeNameEl) {
+            this.themeNameEl.textContent = this.renderer.themes[nextTheme].name;
+        }
+
+        // Show theme name briefly
+        this.showMessage(this.renderer.themes[nextTheme].name);
     }
 
     /**
@@ -618,9 +655,12 @@ class Game {
         // Update time-based rendering
         this.renderer.updateTimePhase(this.elapsedTime, this.timeLimit);
 
+        // Get wall proximity for particle effects
+        const wallProximity = this.maze.getAdjacentWallCount(this.player.gridX, this.player.gridY);
+
         // Update particles
         const isConverging = this.state === 'winning' || this.state === 'won';
-        this.particles.update(currentTime, playerPos.x, playerPos.y, isConverging, goalPos.x, goalPos.y);
+        this.particles.update(currentTime, playerPos.x, playerPos.y, isConverging, goalPos.x, goalPos.y, wallProximity);
 
         // Update effects
         this.effects.update();

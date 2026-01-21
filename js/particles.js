@@ -9,6 +9,16 @@ export class ParticleSystem {
         this.particles = [];
         this.count = 120;
         this.playerInfluenceRadius = 150; // pixels
+        this.wallProximity = 0; // 0-4 walls adjacent to player
+
+        // Theme configuration
+        this.themes = {
+            space: { baseHue: 180, hueRange: 40, saturation: 80, lightness: 75 },
+            underwater: { baseHue: 200, hueRange: 30, saturation: 70, lightness: 65 },
+            forest: { baseHue: 45, hueRange: 25, saturation: 85, lightness: 70 }
+        };
+        this.currentTheme = 'space';
+
         this.init();
     }
 
@@ -43,9 +53,14 @@ export class ParticleSystem {
 
     /**
      * Update all particles
+     * @param wallProximity - number of walls (0-4) adjacent to player's cell
      */
-    update(currentTime, playerScreenX, playerScreenY, isConverging = false, goalScreenX = 0, goalScreenY = 0) {
+    update(currentTime, playerScreenX, playerScreenY, isConverging = false, goalScreenX = 0, goalScreenY = 0, wallProximity = 0) {
         const time = currentTime / 1000;
+        this.wallProximity = wallProximity;
+
+        // Wall proximity affects particle behavior
+        const proximityFactor = wallProximity / 4; // 0-1 normalized
 
         for (const particle of this.particles) {
             if (isConverging) {
@@ -57,21 +72,23 @@ export class ParticleSystem {
                 particle.opacity = Math.min(0.5, particle.opacity + 0.01);
             } else {
                 // Natural drift motion (using noise-like movement)
-                const driftX = Math.cos(time * particle.driftSpeed + particle.phase) * particle.driftRadius;
-                const driftY = Math.sin(time * particle.driftSpeed * 0.7 + particle.phase) * particle.driftRadius;
+                // Increase erratic movement when near walls
+                const agitation = 1 + proximityFactor * 1.5;
+                const driftX = Math.cos(time * particle.driftSpeed * agitation + particle.phase) * particle.driftRadius;
+                const driftY = Math.sin(time * particle.driftSpeed * 0.7 * agitation + particle.phase) * particle.driftRadius;
 
                 // Target position
                 let targetX = particle.baseX + driftX;
                 let targetY = particle.baseY + driftY;
 
-                // Player influence - push particles away
+                // Player influence - push particles away (stronger when near walls)
                 const dx = particle.x - playerScreenX;
                 const dy = particle.y - playerScreenY;
                 const distance = Math.sqrt(dx * dx + dy * dy);
 
                 if (distance < this.playerInfluenceRadius && distance > 0) {
                     const influence = 1 - (distance / this.playerInfluenceRadius);
-                    const pushStrength = influence * 30;
+                    const pushStrength = influence * (30 + proximityFactor * 20);
                     targetX += (dx / distance) * pushStrength;
                     targetY += (dy / distance) * pushStrength;
                 }
@@ -80,8 +97,10 @@ export class ParticleSystem {
                 particle.x += (targetX - particle.x) * 0.02;
                 particle.y += (targetY - particle.y) * 0.02;
 
-                // Opacity pulsing
-                particle.opacity = 0.1 + Math.sin(time * particle.pulseSpeed + particle.phase) * 0.08;
+                // Opacity pulsing - brighter when near walls
+                const baseOpacity = 0.1 + proximityFactor * 0.15;
+                const pulseAmount = 0.08 + proximityFactor * 0.1;
+                particle.opacity = baseOpacity + Math.sin(time * particle.pulseSpeed * (1 + proximityFactor) + particle.phase) * pulseAmount;
             }
 
             // Wrap around screen edges
@@ -94,21 +113,31 @@ export class ParticleSystem {
 
     /**
      * Render all particles - firefly style with glow
+     * Colors shift based on theme and wall proximity
      */
     render(ctx) {
+        const theme = this.themes[this.currentTheme];
+        const proximityFactor = this.wallProximity / 4;
+
+        // Shift hue toward warmer colors when near walls (add orange/red tint)
+        const warmShift = proximityFactor * 30;
+
         for (const particle of this.particles) {
             // Firefly glow effect
-            const glowRadius = particle.size * 4;
+            const glowRadius = particle.size * (4 + proximityFactor * 2);
             const gradient = ctx.createRadialGradient(
                 particle.x, particle.y, 0,
                 particle.x, particle.y, glowRadius
             );
 
-            // Warm firefly colors with slight variation
-            const hue = 180 + Math.sin(particle.phase) * 40; // Cyan to green range
-            gradient.addColorStop(0, `hsla(${hue}, 80%, 75%, ${particle.opacity * 0.9})`);
-            gradient.addColorStop(0.4, `hsla(${hue}, 70%, 60%, ${particle.opacity * 0.4})`);
-            gradient.addColorStop(1, `hsla(${hue}, 60%, 50%, 0)`);
+            // Theme-based colors with wall proximity warm shift
+            const hue = theme.baseHue + Math.sin(particle.phase) * theme.hueRange - warmShift;
+            const sat = theme.saturation + proximityFactor * 10;
+            const light = theme.lightness + proximityFactor * 10;
+
+            gradient.addColorStop(0, `hsla(${hue}, ${sat}%, ${light}%, ${particle.opacity * 0.9})`);
+            gradient.addColorStop(0.4, `hsla(${hue}, ${sat - 10}%, ${light - 15}%, ${particle.opacity * 0.4})`);
+            gradient.addColorStop(1, `hsla(${hue}, ${sat - 20}%, ${light - 25}%, 0)`);
 
             ctx.fillStyle = gradient;
             ctx.beginPath();
@@ -132,6 +161,15 @@ export class ParticleSystem {
             particle.baseY = Math.random() * this.canvas.height;
             particle.x = particle.baseX;
             particle.y = particle.baseY;
+        }
+    }
+
+    /**
+     * Set the visual theme
+     */
+    setTheme(themeName) {
+        if (this.themes[themeName]) {
+            this.currentTheme = themeName;
         }
     }
 }

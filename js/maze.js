@@ -126,7 +126,7 @@ export class Maze {
         }
 
         const cell = this.grid[y][x];
-        
+
         switch (direction) {
             case 'n': return cell.walls.n ? 'wall' : false;
             case 'e': return cell.walls.e ? 'wall' : false;
@@ -158,5 +158,21 @@ export class Maze {
             return this.grid[y][x];
         }
         return null;
+    }
+
+    /**
+     * Get count of adjacent walls for a cell (0-4)
+     * Used for wall proximity hints
+     */
+    getAdjacentWallCount(x, y) {
+        const cell = this.getCell(x, y);
+        if (!cell) return 0;
+
+        let count = 0;
+        if (cell.walls.n) count++;
+        if (cell.walls.e) count++;
+        if (cell.walls.s) count++;
+        if (cell.walls.w) count++;
+        return count;
     }
 }

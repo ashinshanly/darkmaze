@@ -32,6 +32,35 @@ export class Renderer {
         // Time-based evolution
         this.timePhase = 0; // 0-1 representing progression
         this.ambientIntensity = 1.0;
+
+        // Theme system
+        this.themes = {
+            space: {
+                name: 'Space',
+                bg: { r1: 20, g1: 20, b1: 50, r2: 10, g2: 10, b2: 26 },
+                startPortal: { r: 100, g: 180, b: 255 },
+                endPortal: { r: 255, g: 200, b: 100 },
+                orb: { r: 180, g: 200, b: 255 },
+                starHue: 220
+            },
+            underwater: {
+                name: 'Underwater',
+                bg: { r1: 10, g1: 40, b1: 60, r2: 5, g2: 20, b2: 40 },
+                startPortal: { r: 100, g: 220, b: 200 },
+                endPortal: { r: 255, g: 120, b: 150 },
+                orb: { r: 150, g: 230, b: 220 },
+                starHue: 180
+            },
+            forest: {
+                name: 'Forest',
+                bg: { r1: 15, g1: 35, b1: 20, r2: 8, g2: 18, b2: 12 },
+                startPortal: { r: 150, g: 255, b: 150 },
+                endPortal: { r: 255, g: 200, b: 100 },
+                orb: { r: 200, g: 255, b: 180 },
+                starHue: 60
+            }
+        };
+        this.currentTheme = 'space';
     }
 
     /**
@@ -117,6 +146,8 @@ export class Renderer {
      */
     renderBackground(time) {
         this.gradientPhase += 0.001;
+        const theme = this.themes[this.currentTheme];
+        const bg = theme.bg;
 
         // Create moving gradient - gets slightly warmer as time passes
         const centerX = this.canvas.width / 2 + Math.sin(this.gradientPhase) * 100;
@@ -127,23 +158,25 @@ export class Renderer {
             centerX, centerY, Math.max(this.canvas.width, this.canvas.height)
         );
 
-        // Time-based color shift (blue -> slight purple as time passes)
+        // Time-based color shift
         const redShift = Math.floor(this.timePhase * 10);
 
-        gradient.addColorStop(0, `rgb(${20 + redShift}, ${20}, ${50})`);
-        gradient.addColorStop(0.5, `rgb(${15 + redShift}, ${15}, ${42})`);
-        gradient.addColorStop(1, `rgb(${10 + redShift}, ${10}, ${26})`);
+        gradient.addColorStop(0, `rgb(${bg.r1 + redShift}, ${bg.g1}, ${bg.b1})`);
+        gradient.addColorStop(0.5, `rgb(${Math.floor(bg.r1 * 0.75) + redShift}, ${Math.floor(bg.g1 * 0.75)}, ${Math.floor(bg.b1 * 0.84)})`);
+        gradient.addColorStop(1, `rgb(${bg.r2 + redShift}, ${bg.g2}, ${bg.b2})`);
 
         this.ctx.fillStyle = gradient;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
     /**
-     * Render the START point - outward swirling portal vortex (blue/cyan)
+     * Render the START point - outward swirling portal vortex
      */
     renderStartPoint(startX, startY) {
         const pos = this.gridToScreen(startX, startY);
         const time = performance.now() / 1000;
+        const theme = this.themes[this.currentTheme];
+        const c = theme.startPortal;
 
         // Spiral arms pushing outward
         const armCount = 5;
@@ -169,11 +202,11 @@ export class Renderer {
                 const opacity = (1 - t) * 0.6;
                 const size = (1 - t * 0.5) * 3;
 
-                // Particle glow
+                // Particle glow with theme colors
                 const gradient = this.ctx.createRadialGradient(x, y, 0, x, y, size * 3);
-                gradient.addColorStop(0, `rgba(100, 180, 255, ${opacity})`);
-                gradient.addColorStop(0.5, `rgba(80, 150, 255, ${opacity * 0.4})`);
-                gradient.addColorStop(1, 'rgba(60, 120, 255, 0)');
+                gradient.addColorStop(0, `rgba(${c.r}, ${c.g}, ${c.b}, ${opacity})`);
+                gradient.addColorStop(0.5, `rgba(${Math.floor(c.r * 0.8)}, ${Math.floor(c.g * 0.83)}, ${c.b}, ${opacity * 0.4})`);
+                gradient.addColorStop(1, `rgba(${Math.floor(c.r * 0.6)}, ${Math.floor(c.g * 0.67)}, ${c.b}, 0)`);
 
                 this.ctx.fillStyle = gradient;
                 this.ctx.beginPath();
@@ -185,9 +218,9 @@ export class Renderer {
         // Central portal core
         const coreGradient = this.ctx.createRadialGradient(0, 0, 0, 0, 0, 20);
         const corePulse = 0.8 + Math.sin(time * 3) * 0.2;
-        coreGradient.addColorStop(0, `rgba(150, 200, 255, ${0.5 * corePulse})`);
-        coreGradient.addColorStop(0.5, `rgba(100, 150, 255, ${0.25 * corePulse})`);
-        coreGradient.addColorStop(1, 'rgba(80, 120, 255, 0)');
+        coreGradient.addColorStop(0, `rgba(${Math.min(255, c.r + 50)}, ${Math.min(255, c.g + 20)}, ${c.b}, ${0.5 * corePulse})`);
+        coreGradient.addColorStop(0.5, `rgba(${c.r}, ${Math.floor(c.g * 0.83)}, ${c.b}, ${0.25 * corePulse})`);
+        coreGradient.addColorStop(1, `rgba(${Math.floor(c.r * 0.8)}, ${Math.floor(c.g * 0.67)}, ${c.b}, 0)`);
 
         this.ctx.fillStyle = coreGradient;
         this.ctx.beginPath();
@@ -195,7 +228,7 @@ export class Renderer {
         this.ctx.fill();
 
         // Inner bright core
-        this.ctx.fillStyle = `rgba(200, 230, 255, ${0.7 * corePulse})`;
+        this.ctx.fillStyle = `rgba(${Math.min(255, c.r + 100)}, ${Math.min(255, c.g + 50)}, ${c.b}, ${0.7 * corePulse})`;
         this.ctx.beginPath();
         this.ctx.arc(0, 0, 5, 0, Math.PI * 2);
         this.ctx.fill();
@@ -204,11 +237,13 @@ export class Renderer {
     }
 
     /**
-     * Render the END point - inward swirling portal vortex (golden)
+     * Render the END point - inward swirling portal vortex
      */
     renderEndPoint(endX, endY) {
         const pos = this.gridToScreen(endX, endY);
         const time = performance.now() / 1000;
+        const theme = this.themes[this.currentTheme];
+        const c = theme.endPortal;
 
         // Spiral arms pulling inward
         const armCount = 5;
@@ -220,9 +255,9 @@ export class Renderer {
         // Outer beckoning glow
         const outerGlow = this.ctx.createRadialGradient(0, 0, 0, 0, 0, maxRadius * 1.5);
         const breathe = 0.7 + Math.sin(time * 1.5) * 0.3;
-        outerGlow.addColorStop(0, `rgba(255, 200, 100, ${0.15 * breathe})`);
-        outerGlow.addColorStop(0.5, `rgba(255, 180, 80, ${0.05 * breathe})`);
-        outerGlow.addColorStop(1, 'rgba(255, 150, 50, 0)');
+        outerGlow.addColorStop(0, `rgba(${c.r}, ${c.g}, ${c.b}, ${0.15 * breathe})`);
+        outerGlow.addColorStop(0.5, `rgba(${c.r}, ${Math.floor(c.g * 0.9)}, ${Math.floor(c.b * 0.8)}, ${0.05 * breathe})`);
+        outerGlow.addColorStop(1, `rgba(${c.r}, ${Math.floor(c.g * 0.75)}, ${Math.floor(c.b * 0.5)}, 0)`);
 
         this.ctx.fillStyle = outerGlow;
         this.ctx.beginPath();
@@ -246,11 +281,11 @@ export class Renderer {
                 const opacity = t * 0.7;
                 const size = (0.5 + t * 0.8) * 3;
 
-                // Particle glow
+                // Particle glow with theme colors
                 const gradient = this.ctx.createRadialGradient(x, y, 0, x, y, size * 3);
-                gradient.addColorStop(0, `rgba(255, 220, 120, ${opacity})`);
-                gradient.addColorStop(0.5, `rgba(255, 180, 80, ${opacity * 0.4})`);
-                gradient.addColorStop(1, 'rgba(255, 150, 50, 0)');
+                gradient.addColorStop(0, `rgba(${c.r}, ${Math.min(255, c.g + 20)}, ${Math.min(255, c.b + 20)}, ${opacity})`);
+                gradient.addColorStop(0.5, `rgba(${c.r}, ${Math.floor(c.g * 0.9)}, ${Math.floor(c.b * 0.8)}, ${opacity * 0.4})`);
+                gradient.addColorStop(1, `rgba(${c.r}, ${Math.floor(c.g * 0.75)}, ${Math.floor(c.b * 0.5)}, 0)`);
 
                 this.ctx.fillStyle = gradient;
                 this.ctx.beginPath();
@@ -262,9 +297,9 @@ export class Renderer {
         // Central portal core - brighter and more inviting
         const coreGradient = this.ctx.createRadialGradient(0, 0, 0, 0, 0, 25);
         const corePulse = 0.8 + Math.sin(time * 2.5) * 0.2;
-        coreGradient.addColorStop(0, `rgba(255, 240, 180, ${0.7 * corePulse})`);
-        coreGradient.addColorStop(0.4, `rgba(255, 200, 100, ${0.4 * corePulse})`);
-        coreGradient.addColorStop(1, 'rgba(255, 180, 80, 0)');
+        coreGradient.addColorStop(0, `rgba(${c.r}, ${Math.min(255, c.g + 40)}, ${Math.min(255, c.b + 80)}, ${0.7 * corePulse})`);
+        coreGradient.addColorStop(0.4, `rgba(${c.r}, ${c.g}, ${c.b}, ${0.4 * corePulse})`);
+        coreGradient.addColorStop(1, `rgba(${c.r}, ${Math.floor(c.g * 0.9)}, ${Math.floor(c.b * 0.8)}, 0)`);
 
         this.ctx.fillStyle = coreGradient;
         this.ctx.beginPath();
@@ -272,7 +307,7 @@ export class Renderer {
         this.ctx.fill();
 
         // Inner bright core
-        this.ctx.fillStyle = `rgba(255, 250, 220, ${0.9 * corePulse})`;
+        this.ctx.fillStyle = `rgba(${c.r}, ${Math.min(255, c.g + 50)}, ${Math.min(255, c.b + 120)}, ${0.9 * corePulse})`;
         this.ctx.beginPath();
         this.ctx.arc(0, 0, 7, 0, Math.PI * 2);
         this.ctx.fill();
@@ -547,5 +582,30 @@ export class Renderer {
      */
     clear() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    /**
+     * Set the visual theme
+     */
+    setTheme(themeName) {
+        if (this.themes[themeName]) {
+            this.currentTheme = themeName;
+            // Regenerate starfield with theme colors
+            this.stars = this.createStarfield();
+        }
+    }
+
+    /**
+     * Get list of available theme names
+     */
+    getThemeNames() {
+        return Object.keys(this.themes);
+    }
+
+    /**
+     * Get current theme name
+     */
+    getCurrentTheme() {
+        return this.currentTheme;
     }
 }

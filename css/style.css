@@ -706,6 +706,116 @@ body:hover::after {
     }
 }
 
+/* ============================================
+   START PORTAL ANIMATION
+   ============================================ */
+
+/* Portal rings - expanding concentric circles */
+.start-portal-ring {
+    position: fixed;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 95;
+    transform: translate(-50%, -50%);
+    border: 2px solid rgba(100, 180, 255, 0.8);
+    box-shadow:
+        0 0 15px rgba(100, 180, 255, 0.6),
+        0 0 30px rgba(80, 150, 255, 0.4),
+        inset 0 0 15px rgba(100, 180, 255, 0.3);
+    animation: startPortalRing 1.5s ease-out forwards;
+}
+
+@keyframes startPortalRing {
+    0% {
+        width: 20px;
+        height: 20px;
+        opacity: 1;
+        border-width: 3px;
+    }
+
+    50% {
+        opacity: 0.8;
+        border-width: 2px;
+    }
+
+    100% {
+        width: 250px;
+        height: 250px;
+        opacity: 0;
+        border-width: 1px;
+    }
+}
+
+/* Portal particles - radial burst */
+.start-portal-particle {
+    position: fixed;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 96;
+    background: radial-gradient(circle, rgba(150, 200, 255, 1) 0%, rgba(100, 180, 255, 0.8) 50%, transparent 100%);
+    box-shadow:
+        0 0 10px rgba(100, 180, 255, 0.8),
+        0 0 20px rgba(80, 150, 255, 0.5);
+    transform: translate(-50%, -50%);
+    animation: startPortalParticle 1.2s ease-out forwards;
+    animation-delay: var(--delay, 0ms);
+}
+
+@keyframes startPortalParticle {
+    0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    20% {
+        opacity: 1;
+        transform: translate(calc(-50% + var(--tx-mid, 0px)), calc(-50% + var(--ty-mid, 0px))) scale(1.2);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate(calc(-50% + var(--tx-end, 0px)), calc(-50% + var(--ty-end, 0px))) scale(0.5);
+    }
+}
+
+/* Central flash - dramatic core glow */
+.start-portal-flash {
+    position: fixed;
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 94;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle,
+            rgba(200, 230, 255, 0.9) 0%,
+            rgba(100, 180, 255, 0.6) 30%,
+            rgba(80, 150, 255, 0.3) 50%,
+            transparent 70%);
+    animation: startPortalFlash 1s ease-out forwards;
+}
+
+@keyframes startPortalFlash {
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 1;
+    }
+
+    30% {
+        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(2);
+        opacity: 0;
+    }
+}
+
 /* Wall flash */
 .wall-flash {
     position: fixed;

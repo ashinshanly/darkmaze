@@ -80,6 +80,12 @@ class Game {
         // Start game loop
         requestAnimationFrame(this.gameLoop);
 
+        // Trigger start portal animation
+        setTimeout(() => {
+            const startPos = this.renderer.gridToScreen(this.maze.start.x, this.maze.start.y);
+            this.effects.triggerStartPortal(startPos.x, startPos.y);
+        }, 100);
+
         // Expose for debugging
         window.game = this;
     }
@@ -577,6 +583,12 @@ class Game {
 
         // Reinitialize particles
         this.particles.init();
+
+        // Trigger start portal animation
+        setTimeout(() => {
+            const startPos = this.renderer.gridToScreen(this.maze.start.x, this.maze.start.y);
+            this.effects.triggerStartPortal(startPos.x, startPos.y);
+        }, 600);
     }
 
     /**

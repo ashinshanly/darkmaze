@@ -256,6 +256,7 @@ class Game {
             this.instructions.classList.add('fade-out');
             this.hud.classList.add('visible');
             this.startTime = Date.now(); // Start timer on first move
+            this.audio.startAmbient(); // Start ambient soundtrack
         }
 
         // Check if move is blocked
@@ -404,6 +405,10 @@ class Game {
                 this.triggerGameOver('time');
             }
 
+            // Update ambient audio intensity based on remaining time
+            const remainingRatio = this.remainingTime / this.timeLimit;
+            this.audio.updateIntensity(remainingRatio);
+
             // Update HUD urgency state
             this.updateHUDUrgency();
         }
@@ -493,6 +498,9 @@ class Game {
     triggerGameOver(reason) {
         this.state = 'gameover';
 
+        // Stop ambient music
+        this.audio.stopAmbient();
+
         // Update game over screen
         document.getElementById('goMoves').textContent = this.player.moveCount;
 
@@ -575,6 +583,9 @@ class Game {
 
         // Reset effects
         this.effects.reset();
+
+        // Stop ambient music
+        this.audio.stopAmbient();
 
         // Reset game state
         this.state = 'playing';

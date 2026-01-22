@@ -168,10 +168,12 @@ body:hover::after {
 /* Mobile responsive */
 @media (max-width: 768px) {
     #themeToggle {
-        top: 12px;
-        right: 12px;
-        padding: 8px 12px;
-        font-size: 0.75rem;
+        top: auto;
+        right: auto;
+        bottom: 12px;
+        left: 12px;
+        padding: 6px 10px;
+        font-size: 0.65rem;
     }
 
     #themeToggle svg {

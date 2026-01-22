@@ -744,5 +744,5 @@ class Game {
 
 // Initialize game when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    window.game = new Game();
+    new Game();
 });

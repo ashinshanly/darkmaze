@@ -736,7 +736,8 @@ class Game {
             this.player.renderX,
             this.player.renderY,
             this.player.glowIntensity,
-            this.energy
+            this.energy,
+            this.player.rotationAngle // Pass rotation for characters
         );
     }
 }

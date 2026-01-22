@@ -41,9 +41,11 @@ export class Player {
         this.collisionCount = 0;
         this.startTime = Date.now();
 
-        // Visual properties
+        // Render properties
         this.baseRadius = 12;
         this.glowIntensity = 1.0;
+        this.rotationAngle = -Math.PI / 2; // Current visual angle
+        this.targetRotation = -Math.PI / 2; // Target angle based on movement
     }
 
     /**
@@ -51,6 +53,14 @@ export class Player {
      */
     moveTo(x, y) {
         if (this.isMoving || this.isBouncing) return false;
+
+        // Calculate rotation angle based on direction
+        const dx = x - this.gridX;
+        const dy = y - this.gridY;
+
+        if (dx !== 0 || dy !== 0) {
+            this.targetRotation = Math.atan2(dy, dx);
+        }
 
         this.isMoving = true;
         this.moveStartTime = performance.now();
@@ -133,6 +143,17 @@ export class Player {
 
         // Update ghosts (fade out)
         this.updateGhosts(currentTime);
+        // Smooth rotation
+        let diff = this.targetRotation - this.rotationAngle;
+        // Normalize angle difference to -PI..PI
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+
+        if (Math.abs(diff) > 0.01) {
+            this.rotationAngle += diff * 0.15; // Smooth turn
+        } else {
+            this.rotationAngle = this.targetRotation;
+        }
 
         // Slowly recover glow intensity
         this.glowIntensity = Math.min(1.0, this.glowIntensity + 0.001);

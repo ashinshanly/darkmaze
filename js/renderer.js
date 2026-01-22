@@ -482,60 +482,169 @@ export class Renderer {
     /**
      * Render the player orb with energy-based glow
      */
-    renderPlayer(renderX, renderY, glowIntensity, energy = 1) {
+    /**
+     * Render the player character based on theme
+     */
+    renderPlayer(renderX, renderY, glowIntensity, energy = 1, rotationAngle = 0) {
         const pos = this.gridToScreen(renderX, renderY);
-        const time = performance.now() / 1000;
+        const color = this.themes[this.currentTheme].orb;
 
-        // Pulsing core radius - faster pulse when low energy
-        const pulseSpeed = 2 + (1 - energy) * 3;
-        const pulseAmount = 1 + Math.sin(time * pulseSpeed) * 0.1;
-        const coreRadius = 10 * pulseAmount;
+        this.ctx.save();
+        this.ctx.translate(pos.x, pos.y);
 
-        // Color shifts based on energy
-        const r = Math.floor(180 + (1 - energy) * 75);
-        const g = Math.floor(200 - (1 - energy) * 100);
-        const b = 255;
+        // Character rendering based on theme
+        if (this.currentTheme === 'space') {
+            this.renderSpaceship(0, 0, color, glowIntensity, energy, rotationAngle);
+        } else if (this.currentTheme === 'underwater') {
+            this.renderFish(0, 0, color, glowIntensity, energy, rotationAngle);
+        } else {
+            // Default orb (Forest/Default)
+            this.renderOrb(0, 0, color, glowIntensity, energy);
+        }
 
-        // Outer glow
-        const outerGlow = this.ctx.createRadialGradient(
-            pos.x, pos.y, 0,
-            pos.x, pos.y, 60
-        );
-        outerGlow.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${0.15 * glowIntensity})`);
-        outerGlow.addColorStop(0.5, `rgba(${r - 60}, ${g - 50}, ${b}, ${0.05 * glowIntensity})`);
-        outerGlow.addColorStop(1, `rgba(${r - 80}, ${g - 70}, ${b}, 0)`);
+        this.ctx.restore();
+    }
 
-        this.ctx.fillStyle = outerGlow;
+    /**
+     * Render standard Orb character
+     */
+    renderOrb(x, y, color, glowIntensity, energy) {
+        const radius = this.cellSize * 0.35 * Math.min(1, 0.5 + energy * 0.5); // Shrink slightly if low energy
+
+        // Inner core
+        this.ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
+        this.ctx.shadowBlur = 20 * glowIntensity;
+        this.ctx.shadowColor = `rgb(${color.r}, ${color.g}, ${color.b})`;
         this.ctx.beginPath();
-        this.ctx.arc(pos.x, pos.y, 60, 0, Math.PI * 2);
+        this.ctx.arc(x, y, radius * 0.6, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Outer glow halo
+        const gradient = this.ctx.createRadialGradient(x, y, radius * 0.5, x, y, radius * 1.5);
+        gradient.addColorStop(0, `rgba(${color.r}, ${color.g}, ${color.b}, ${0.6 * glowIntensity})`);
+        gradient.addColorStop(1, `rgba(${color.r}, ${color.g}, ${color.b}, 0)`);
+
+        this.ctx.fillStyle = gradient;
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, radius * 1.5, 0, Math.PI * 2);
         this.ctx.fill();
 
         // Middle glow
         const midGlow = this.ctx.createRadialGradient(
-            pos.x, pos.y, 0,
-            pos.x, pos.y, 30
+            0, 0, 0,
+            0, 0, 30
         );
-        midGlow.addColorStop(0, `rgba(${r + 40}, ${g + 30}, ${b}, ${0.4 * glowIntensity})`);
-        midGlow.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, ${0.2 * glowIntensity})`);
-        midGlow.addColorStop(1, `rgba(${r - 30}, ${g - 20}, ${b}, 0)`);
+        midGlow.addColorStop(0, `rgba(${color.r + 40}, ${color.g + 30}, ${color.b}, ${0.4 * glowIntensity})`);
+        midGlow.addColorStop(0.6, `rgba(${color.r}, ${color.g}, ${color.b}, ${0.2 * glowIntensity})`);
+        midGlow.addColorStop(1, `rgba(${color.r - 30}, ${color.g - 20}, ${color.b}, 0)`);
 
         this.ctx.fillStyle = midGlow;
         this.ctx.beginPath();
-        this.ctx.arc(pos.x, pos.y, 30, 0, Math.PI * 2);
+        this.ctx.arc(0, 0, 30, 0, Math.PI * 2);
         this.ctx.fill();
 
         // Core
         const coreGradient = this.ctx.createRadialGradient(
-            pos.x, pos.y, 0,
-            pos.x, pos.y, coreRadius
+            0, 0, 0,
+            0, 0, 10
         );
         coreGradient.addColorStop(0, `rgba(255, 255, 255, ${0.95 * glowIntensity})`);
-        coreGradient.addColorStop(0.5, `rgba(${r + 50}, ${g + 40}, ${b}, ${0.8 * glowIntensity})`);
-        coreGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${0.4 * glowIntensity})`);
+        coreGradient.addColorStop(0.5, `rgba(${color.r + 50}, ${color.g + 40}, ${color.b}, ${0.8 * glowIntensity})`);
+        coreGradient.addColorStop(1, `rgba(${color.r}, ${color.g}, ${color.b}, ${0.4 * glowIntensity})`);
 
         this.ctx.fillStyle = coreGradient;
         this.ctx.beginPath();
-        this.ctx.arc(pos.x, pos.y, coreRadius, 0, Math.PI * 2);
+        this.ctx.arc(0, 0, 10, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
+    /**
+     * Render retro Spaceship character
+     */
+    renderSpaceship(x, y, color, glowIntensity, energy, angle) {
+        const size = this.cellSize * 0.4;
+
+        this.ctx.rotate(angle);
+
+        // Engine glow (behind)
+        const engineGlow = this.ctx.createLinearGradient(-size, 0, -size * 2, 0);
+        engineGlow.addColorStop(0, `rgba(100, 200, 255, ${0.8 * energy})`);
+        engineGlow.addColorStop(1, 'rgba(100, 200, 255, 0)');
+
+        this.ctx.fillStyle = engineGlow;
+        this.ctx.beginPath();
+        this.ctx.moveTo(-size * 0.5, size * 0.3);
+        this.ctx.lineTo(-size * 1.8, 0);
+        this.ctx.lineTo(-size * 0.5, -size * 0.3);
+        this.ctx.fill();
+
+        // Ship body (Triangle)
+        this.ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
+        this.ctx.shadowBlur = 15 * glowIntensity;
+        this.ctx.shadowColor = `rgba(${color.r}, ${color.g}, ${color.b}, 0.5)`;
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(size, 0); // Nose
+        this.ctx.lineTo(-size * 0.6, size * 0.6); // Right wing
+        this.ctx.lineTo(-size * 0.3, 0); // Center notch
+        this.ctx.lineTo(-size * 0.6, -size * 0.6); // Left wing
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Cockpit window
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        this.ctx.shadowBlur = 5;
+        this.ctx.shadowColor = 'white';
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, size * 0.15, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
+    /**
+     * Render Stylized Fish character
+     */
+    renderFish(x, y, color, glowIntensity, energy, angle) {
+        const size = this.cellSize * 0.4;
+        const time = performance.now() / 200;
+
+        this.ctx.rotate(angle); // Face movement direction
+
+        // Tail wiggle animation
+        const tailWiggle = Math.sin(time * 5) * 0.2;
+
+        this.ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
+        this.ctx.shadowBlur = 15 * glowIntensity;
+        this.ctx.shadowColor = `rgba(${color.r}, ${color.g}, ${color.b}, 0.5)`;
+
+        this.ctx.beginPath();
+        // Body
+        this.ctx.ellipse(0, 0, size, size * 0.6, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Tail
+        this.ctx.save();
+        this.ctx.translate(-size * 0.8, 0);
+        this.ctx.rotate(tailWiggle);
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, 0);
+        this.ctx.lineTo(-size * 0.6, -size * 0.5);
+        this.ctx.lineTo(-size * 0.6, size * 0.5);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.restore();
+
+        // Eye
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        this.ctx.beginPath();
+        this.ctx.arc(size * 0.4, -size * 0.2, size * 0.15, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Side fin
+        this.ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, 0.8)`;
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, 0);
+        this.ctx.lineTo(-size * 0.3, size * 0.4);
+        this.ctx.lineTo(size * 0.2, size * 0.2);
         this.ctx.fill();
     }
 

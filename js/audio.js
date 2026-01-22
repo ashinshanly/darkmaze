@@ -16,7 +16,8 @@ export class Audio {
         this.ambientNodes = [];
 
         // Music parameters
-        this.droneFreqs = [55, 82.5, 110]; // A1, E2, A2 - deep mysterious drone
+        // Smooth C Major 7 pad (C3, E3, G3, B3)
+        this.droneFreqs = [130.81, 164.81, 196.00, 246.94];
         this.pulseInterval = null;
     }
 
@@ -63,7 +64,7 @@ export class Audio {
     }
 
     /**
-     * Create continuous drone layer - mysterious atmospheric base
+     * Create continuous drone layer - smooth atmospheric base
      */
     createDroneLayer() {
         const now = this.ctx.currentTime;
@@ -74,26 +75,26 @@ export class Audio {
             const gain = this.ctx.createGain();
             const filter = this.ctx.createBiquadFilter();
 
-            osc.type = 'sawtooth';
+            osc.type = 'triangle'; // Smoother than sawtooth
             osc.frequency.value = freq;
 
-            // Slow LFO for movement
+            // Slow LFO for movement - very subtle
             const lfo = this.ctx.createOscillator();
             const lfoGain = this.ctx.createGain();
             lfo.type = 'sine';
-            lfo.frequency.value = 0.1 + i * 0.05; // Slow modulation
-            lfoGain.gain.value = freq * 0.02; // Subtle pitch wobble
+            lfo.frequency.value = 0.05 + i * 0.02; // Slower modulation
+            lfoGain.gain.value = freq * 0.01; // Minimal pitch wobble
             lfo.connect(lfoGain);
             lfoGain.connect(osc.frequency);
             lfo.start(now);
 
             // Low-pass filter for warmth
             filter.type = 'lowpass';
-            filter.frequency.value = 400;
-            filter.Q.value = 1;
+            filter.frequency.value = 300; // Warmer cutoff
+            filter.Q.value = 0.5;
 
-            // Set volume (quieter for higher partials)
-            gain.gain.value = 0.08 / (i + 1);
+            // Set volume
+            gain.gain.value = 0.1 / (i + 1);
 
             osc.connect(filter);
             filter.connect(gain);
@@ -104,8 +105,7 @@ export class Audio {
             this.ambientNodes.push({ osc, gain, filter, lfo, lfoGain });
         });
 
-        // Add noise layer for texture
-        this.createNoiseLayer();
+        // No noise layer for smooth theme
     }
 
     /**
@@ -142,7 +142,7 @@ export class Audio {
     }
 
     /**
-     * Start rhythmic pulse layer - tribal heartbeat
+     * Start rhythmic pulse layer - smooth heartbeat
      */
     startPulseLayer() {
         let beatCount = 0;
@@ -155,36 +155,39 @@ export class Audio {
             // Base tempo increases with intensity
             const baseTempo = 800 - this.intensity * 400; // 800ms -> 400ms
 
-            // Tribal pattern: strong-weak-weak-strong
-            const pattern = [1, 0.3, 0.5, 0.8];
+            // Pattern: simple heartbeat
+            const pattern = [0.8, 0, 0.4, 0];
             const strength = pattern[beatCount % 4];
 
-            // Low drum hit
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
+            if (strength > 0) {
+                // Soft low thump
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
 
-            osc.type = 'sine';
-            const baseFreq = 60 + this.intensity * 20;
-            osc.frequency.setValueAtTime(baseFreq, now);
-            osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.5, now + 0.1);
+                osc.type = 'sine';
+                const baseFreq = 50 + this.intensity * 10;
+                osc.frequency.setValueAtTime(baseFreq, now);
+                osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.8, now + 0.1);
 
-            const volume = 0.12 * strength * (0.5 + this.intensity * 0.5);
-            gain.gain.setValueAtTime(volume, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                const volume = 0.15 * strength * (0.6 + this.intensity * 0.4);
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(volume, now + 0.02); // Softer attack
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3); // Longer release
 
-            osc.connect(gain);
-            gain.connect(this.masterGain);
+                osc.connect(gain);
+                gain.connect(this.masterGain);
 
-            osc.start(now);
-            osc.stop(now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
 
-            // Add shaker/rattle on off-beats at higher intensity
-            if (this.intensity > 0.3 && beatCount % 2 === 1) {
-                this.playShaker(now, strength * 0.5);
+            // Add smooth shaker at higher intensity
+            if (this.intensity > 0.4 && beatCount % 2 === 1) {
+                this.playShaker(now, 0.3);
             }
 
             // Add melodic accent occasionally at higher intensity
-            if (this.intensity > 0.5 && beatCount % 8 === 0) {
+            if (this.intensity > 0.6 && beatCount % 8 === 0) {
                 this.playMelodicAccent(now);
             }
 

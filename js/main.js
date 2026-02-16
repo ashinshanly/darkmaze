@@ -40,6 +40,8 @@ class Game {
         // Game state
         this.state = 'playing'; // playing, winning, won, gameover
         this.winProgress = 0;
+        this.pathProgress = 0;
+        this.solutionPath = [];
         this.paletteIndex = 0;
 
         // Energy system
@@ -498,6 +500,10 @@ class Game {
     triggerGameOver(reason) {
         this.state = 'gameover';
 
+        // Calculate solution path
+        this.solutionPath = this.maze.solve();
+        this.pathProgress = 0;
+
         // Stop ambient music
         this.audio.stopAmbient();
 
@@ -590,6 +596,8 @@ class Game {
         // Reset game state
         this.state = 'playing';
         this.winProgress = 0;
+        this.pathProgress = 0;
+        this.solutionPath = [];
         this.hasMovedOnce = false;
 
         // Reset energy
@@ -682,6 +690,9 @@ class Game {
             if (this.winProgress >= 1) {
                 this.showWinScreen();
             }
+        } else if (this.state === 'gameover') {
+            // Animate path revelation
+            this.pathProgress = Math.min(1, this.pathProgress + 0.005);
         }
 
         // Render
@@ -729,6 +740,11 @@ class Game {
         // Goal (only during win)
         if (this.state === 'winning' || this.state === 'won') {
             this.renderer.renderGoal(this.maze.goal.x, this.maze.goal.y, this.winProgress);
+        }
+
+        // Render solution path on game over
+        if (this.state === 'gameover' && this.solutionPath.length > 0) {
+            this.renderer.renderSolutionPath(this.solutionPath, this.pathProgress);
         }
 
         // Player (with energy affecting appearance)

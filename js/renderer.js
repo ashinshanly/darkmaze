@@ -671,6 +671,62 @@ export class Renderer {
     }
 
     /**
+     * Render the solution path
+     * @param {Array} path Array of grid coordinates {x, y}
+     * @param {number} progress 0-1 percentage of path to draw
+     */
+    renderSolutionPath(path, progress) {
+        if (!path || path.length < 2) return;
+
+        const pointsToDraw = Math.floor(path.length * progress);
+        if (pointsToDraw < 1) return;
+
+        this.ctx.save();
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
+
+        // Outer glow
+        this.ctx.shadowBlur = 15;
+        this.ctx.shadowColor = 'rgba(100, 255, 218, 0.8)'; // Cyan/Teal neon glow
+        this.ctx.strokeStyle = 'rgba(100, 255, 218, 0.6)';
+        this.ctx.lineWidth = 4;
+
+        this.ctx.beginPath();
+        const startPos = this.gridToScreen(path[0].x, path[0].y);
+        this.ctx.moveTo(startPos.x, startPos.y);
+
+        for (let i = 1; i < pointsToDraw; i++) {
+            const pos = this.gridToScreen(path[i].x, path[i].y);
+            this.ctx.lineTo(pos.x, pos.y);
+        }
+
+        // Draw partial segment for smooth animation
+        if (pointsToDraw < path.length) {
+            const partial = (path.length * progress) - pointsToDraw;
+            const current = path[pointsToDraw - 1];
+            const next = path[pointsToDraw];
+
+            const currentPos = this.gridToScreen(current.x, current.y);
+            const nextPos = this.gridToScreen(next.x, next.y);
+
+            const x = currentPos.x + (nextPos.x - currentPos.x) * partial;
+            const y = currentPos.y + (nextPos.y - currentPos.y) * partial;
+
+            this.ctx.lineTo(x, y);
+        }
+
+        this.ctx.stroke();
+
+        // Inner bright line
+        this.ctx.shadowBlur = 0;
+        this.ctx.strokeStyle = 'rgba(200, 255, 255, 0.9)';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+
+        this.ctx.restore();
+    }
+
+    /**
      * Get collision wall position for flash effect
      */
     getWallPosition(gridX, gridY, direction) {

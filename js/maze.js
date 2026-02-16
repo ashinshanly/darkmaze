@@ -175,4 +175,64 @@ export class Maze {
         if (cell.walls.w) count++;
         return count;
     }
+
+    /**
+     * Solve the maze using BFS to find the shortest path
+     * @returns {Array} Array of grid coordinates {x, y} from start to goal
+     */
+    solve() {
+        const start = this.start;
+        const goal = this.goal;
+
+        // Queue stores: { x, y, path: [ {x,y}, ... ] }
+        const queue = [{
+            x: start.x,
+            y: start.y,
+            path: [{ x: start.x, y: start.y }]
+        }];
+
+        const visited = new Set();
+        visited.add(`${start.x},${start.y}`);
+
+        while (queue.length > 0) {
+            const current = queue.shift();
+            const { x, y, path } = current;
+
+            // Check if reached goal
+            if (x === goal.x && y === goal.y) {
+                return path;
+            }
+
+            // Check neighbors (N, E, S, W)
+            const directions = [
+                { dx: 0, dy: -1, dir: 'n' }, // North
+                { dx: 1, dy: 0, dir: 'e' },  // East
+                { dx: 0, dy: 1, dir: 's' },  // South
+                { dx: -1, dy: 0, dir: 'w' }  // West
+            ];
+
+            for (const { dx, dy, dir } of directions) {
+                const nx = x + dx;
+                const ny = y + dy;
+
+                // Check bounds
+                if (nx >= 0 && nx < this.width && ny >= 0 && ny < this.height) {
+                    // Check if visited
+                    if (!visited.has(`${nx},${ny}`)) {
+                        // Check if wall exists (canMove returns false if clear)
+                        if (this.canMove(x, y, dir) === false) {
+                            visited.add(`${nx},${ny}`);
+                            queue.push({
+                                x: nx,
+                                y: ny,
+                                path: [...path, { x: nx, y: ny }]
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        return []; // Should not happen in perfect maze
+    }
 }

@@ -29,6 +29,11 @@ export class Renderer {
         // Background gradient animation
         this.gradientPhase = 0;
 
+        // Background sea creatures (underwater theme)
+        this.bgCreatures = [];
+        this._lastCreatureSpawn = 0;
+        this._creatureSpawnInterval = 4000 + Math.random() * 6000; // 4-10s between spawns
+
         // Time-based evolution
         this.timePhase = 0; // 0-1 representing progression
         this.ambientIntensity = 1.0;
@@ -126,24 +131,31 @@ export class Renderer {
      * Create starfield for background
      */
     createStarfield() {
-        const stars = [];
+        const particles = [];
         const count = 80;
 
         for (let i = 0; i < count; i++) {
-            stars.push({
+            particles.push({
                 x: Math.random() * this.canvas.width,
                 y: Math.random() * this.canvas.height,
                 size: 0.5 + Math.random() * 2,
                 baseOpacity: 0.2 + Math.random() * 0.4,
                 twinkleSpeed: 0.5 + Math.random() * 2,
                 twinklePhase: Math.random() * Math.PI * 2,
-                // Color variation: white to slight blue/purple
+                // Star color
                 hue: 220 + Math.random() * 40,
-                saturation: 10 + Math.random() * 30
+                saturation: 10 + Math.random() * 30,
+                // Bubble/Leaf properties
+                driftSpeed: 0.15 + Math.random() * 0.4, // pixels per frame
+                wobblePhase: Math.random() * Math.PI * 2,
+                wobbleSpeed: 0.3 + Math.random() * 0.7,
+                rotation: Math.random() * Math.PI * 2,
+                rotationSpeed: (Math.random() - 0.5) * 0.02,
+                leafType: Math.floor(Math.random() * 3) // 0, 1, 2 for variety
             });
         }
 
-        return stars;
+        return particles;
     }
 
     /**
@@ -336,12 +348,23 @@ export class Renderer {
     renderStarfield(time) {
         const t = time / 1000;
 
+        if (this.currentTheme === 'underwater') {
+            this._renderBubbles(t);
+        } else if (this.currentTheme === 'forest') {
+            this._renderLeaves(t);
+        } else {
+            this._renderStars(t);
+        }
+    }
+
+    /**
+     * Render twinkling stars (Space theme)
+     */
+    _renderStars(t) {
         for (const star of this.stars) {
-            // Twinkling effect
             const twinkle = Math.sin(t * star.twinkleSpeed + star.twinklePhase);
             const opacity = star.baseOpacity * (0.5 + twinkle * 0.5);
 
-            // Draw star with slight glow
             const gradient = this.ctx.createRadialGradient(
                 star.x, star.y, 0,
                 star.x, star.y, star.size * 3
@@ -356,11 +379,375 @@ export class Renderer {
             this.ctx.arc(star.x, star.y, star.size * 3, 0, Math.PI * 2);
             this.ctx.fill();
 
-            // Bright core
             this.ctx.fillStyle = `hsla(${star.hue}, ${star.saturation}%, 95%, ${opacity})`;
             this.ctx.beginPath();
             this.ctx.arc(star.x, star.y, star.size * 0.5, 0, Math.PI * 2);
             this.ctx.fill();
+        }
+    }
+
+    /**
+     * Render rising bubbles (Underwater theme)
+     */
+    _renderBubbles(t) {
+        for (const p of this.stars) {
+            // Drift upward
+            p.y -= p.driftSpeed;
+            // Gentle horizontal wobble
+            p.x += Math.sin(t * p.wobbleSpeed + p.wobblePhase) * 0.3;
+
+            // Wrap around when off screen
+            if (p.y < -10) {
+                p.y = this.canvas.height + 10;
+                p.x = Math.random() * this.canvas.width;
+            }
+            if (p.x < -10) p.x = this.canvas.width + 10;
+            if (p.x > this.canvas.width + 10) p.x = -10;
+
+            const bubbleSize = p.size * 2.5 + 1;
+            const wobble = Math.sin(t * p.twinkleSpeed + p.twinklePhase);
+            const opacity = p.baseOpacity * (0.4 + wobble * 0.2);
+
+            // Bubble body — translucent circle
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, bubbleSize, 0, Math.PI * 2);
+            this.ctx.strokeStyle = `rgba(150, 220, 255, ${opacity * 0.8})`;
+            this.ctx.lineWidth = 0.8;
+            this.ctx.stroke();
+
+            // Inner fill
+            const grad = this.ctx.createRadialGradient(
+                p.x - bubbleSize * 0.3, p.y - bubbleSize * 0.3, 0,
+                p.x, p.y, bubbleSize
+            );
+            grad.addColorStop(0, `rgba(200, 240, 255, ${opacity * 0.25})`);
+            grad.addColorStop(0.6, `rgba(100, 200, 255, ${opacity * 0.08})`);
+            grad.addColorStop(1, `rgba(80, 180, 255, 0)`);
+            this.ctx.fillStyle = grad;
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, bubbleSize, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            // Highlight/shine spot
+            this.ctx.fillStyle = `rgba(255, 255, 255, ${opacity * 0.5})`;
+            this.ctx.beginPath();
+            this.ctx.arc(
+                p.x - bubbleSize * 0.3,
+                p.y - bubbleSize * 0.3,
+                bubbleSize * 0.2,
+                0, Math.PI * 2
+            );
+            this.ctx.fill();
+        }
+
+        // Render background sea creatures
+        this._updateAndRenderCreatures(t);
+    }
+
+    /**
+     * Spawn, update, and render background sea creatures
+     */
+    _updateAndRenderCreatures(t) {
+        const now = performance.now();
+
+        // Spawn new creature occasionally (max 3 on screen)
+        if (now - this._lastCreatureSpawn > this._creatureSpawnInterval && this.bgCreatures.length < 3) {
+            this._spawnCreature();
+            this._lastCreatureSpawn = now;
+            this._creatureSpawnInterval = 3000 + Math.random() * 4000;
+        }
+
+        // Update and render each creature
+        for (let i = this.bgCreatures.length - 1; i >= 0; i--) {
+            const c = this.bgCreatures[i];
+
+            // Move horizontally
+            c.x += c.speed;
+
+            // Gentle vertical bobbing
+            c.y += Math.sin(t * c.bobSpeed + c.bobPhase) * 0.3;
+
+            // Remove if off screen
+            if ((c.speed > 0 && c.x > this.canvas.width + 100) ||
+                (c.speed < 0 && c.x < -100)) {
+                this.bgCreatures.splice(i, 1);
+                continue;
+            }
+
+            // Render the creature
+            this.ctx.save();
+            this.ctx.translate(c.x, c.y);
+            // Flip horizontally if swimming left
+            if (c.speed < 0) this.ctx.scale(-1, 1);
+            this.ctx.globalAlpha = c.opacity;
+
+            if (c.type === 'shark') {
+                this._drawSharkSilhouette(c.size, t);
+            } else if (c.type === 'turtle') {
+                this._drawTurtleSilhouette(c.size, t);
+            } else {
+                this._drawWhaleSilhouette(c.size, t);
+            }
+
+            this.ctx.globalAlpha = 1;
+            this.ctx.restore();
+        }
+    }
+
+    /**
+     * Spawn a random sea creature off-screen
+     */
+    _spawnCreature() {
+        const types = ['shark', 'turtle', 'whale'];
+        const type = types[Math.floor(Math.random() * types.length)];
+
+        // Determine size based on type
+        const sizeMap = { shark: 30 + Math.random() * 20, turtle: 22 + Math.random() * 13, whale: 45 + Math.random() * 20 };
+        const speedMap = { shark: 0.5 + Math.random() * 0.4, turtle: 0.25 + Math.random() * 0.2, whale: 0.35 + Math.random() * 0.25 };
+
+        // Swim from left or right
+        const fromLeft = Math.random() > 0.5;
+        const speed = fromLeft ? speedMap[type] : -speedMap[type];
+        const startX = fromLeft ? -80 : this.canvas.width + 80;
+
+        // Random depth (avoid top HUD area and bottom controls)
+        const y = 120 + Math.random() * (this.canvas.height - 300);
+
+        this.bgCreatures.push({
+            type,
+            x: startX,
+            y,
+            size: sizeMap[type],
+            speed,
+            opacity: 0.25 + Math.random() * 0.2, // Visible but still background
+            bobSpeed: 0.3 + Math.random() * 0.5,
+            bobPhase: Math.random() * Math.PI * 2
+        });
+    }
+
+    /**
+     * Draw a shark silhouette
+     */
+    _drawSharkSilhouette(size, t) {
+        const tailWag = Math.sin(t * 3) * 0.15;
+
+        this.ctx.fillStyle = 'rgba(40, 80, 120, 1)';
+        this.ctx.beginPath();
+
+        // Body
+        this.ctx.moveTo(size, 0); // Nose
+        this.ctx.bezierCurveTo(size * 0.7, -size * 0.35, size * 0.2, -size * 0.4, -size * 0.3, -size * 0.15);
+        // Dorsal fin
+        this.ctx.lineTo(-size * 0.1, -size * 0.7);
+        this.ctx.lineTo(-size * 0.4, -size * 0.15);
+        // Tail
+        this.ctx.lineTo(-size * 0.8, -size * (0.1 + tailWag));
+        this.ctx.lineTo(-size, -size * (0.35 + tailWag));
+        this.ctx.lineTo(-size * 0.85, 0);
+        this.ctx.lineTo(-size, size * (0.25 - tailWag));
+        this.ctx.lineTo(-size * 0.8, size * (0.05 - tailWag));
+        // Bottom body
+        this.ctx.bezierCurveTo(-size * 0.4, size * 0.2, size * 0.2, size * 0.3, size, 0);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Pectoral fin
+        this.ctx.beginPath();
+        this.ctx.moveTo(size * 0.2, size * 0.15);
+        this.ctx.lineTo(0, size * 0.45);
+        this.ctx.lineTo(-size * 0.2, size * 0.15);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Eye
+        this.ctx.fillStyle = 'rgba(100, 160, 200, 0.6)';
+        this.ctx.beginPath();
+        this.ctx.arc(size * 0.65, -size * 0.08, size * 0.05, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
+    /**
+     * Draw a turtle silhouette
+     */
+    _drawTurtleSilhouette(size, t) {
+        const flipperAngle = Math.sin(t * 2) * 0.3;
+
+        this.ctx.fillStyle = 'rgba(50, 100, 80, 1)';
+
+        // Shell (oval)
+        this.ctx.beginPath();
+        this.ctx.ellipse(0, 0, size * 0.6, size * 0.45, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Head
+        this.ctx.beginPath();
+        this.ctx.ellipse(size * 0.7, -size * 0.05, size * 0.2, size * 0.15, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Front flipper (top)
+        this.ctx.save();
+        this.ctx.translate(size * 0.2, -size * 0.35);
+        this.ctx.rotate(-0.4 + flipperAngle);
+        this.ctx.beginPath();
+        this.ctx.ellipse(0, -size * 0.2, size * 0.12, size * 0.3, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.restore();
+
+        // Front flipper (bottom)
+        this.ctx.save();
+        this.ctx.translate(size * 0.2, size * 0.35);
+        this.ctx.rotate(0.4 - flipperAngle);
+        this.ctx.beginPath();
+        this.ctx.ellipse(0, size * 0.2, size * 0.12, size * 0.3, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.restore();
+
+        // Rear flipper (top)
+        this.ctx.save();
+        this.ctx.translate(-size * 0.4, -size * 0.3);
+        this.ctx.rotate(-0.2 - flipperAngle * 0.5);
+        this.ctx.beginPath();
+        this.ctx.ellipse(0, -size * 0.1, size * 0.08, size * 0.2, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.restore();
+
+        // Rear flipper (bottom)
+        this.ctx.save();
+        this.ctx.translate(-size * 0.4, size * 0.3);
+        this.ctx.rotate(0.2 + flipperAngle * 0.5);
+        this.ctx.beginPath();
+        this.ctx.ellipse(0, size * 0.1, size * 0.08, size * 0.2, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.restore();
+
+        // Shell pattern
+        this.ctx.strokeStyle = 'rgba(30, 80, 60, 0.5)';
+        this.ctx.lineWidth = 0.8;
+        this.ctx.beginPath();
+        this.ctx.ellipse(0, 0, size * 0.35, size * 0.25, 0, 0, Math.PI * 2);
+        this.ctx.stroke();
+
+        // Eye
+        this.ctx.fillStyle = 'rgba(100, 170, 140, 0.6)';
+        this.ctx.beginPath();
+        this.ctx.arc(size * 0.82, -size * 0.06, size * 0.04, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
+    /**
+     * Draw a whale silhouette
+     */
+    _drawWhaleSilhouette(size, t) {
+        const tailWag = Math.sin(t * 1.5) * 0.1;
+
+        this.ctx.fillStyle = 'rgba(30, 60, 100, 1)';
+        this.ctx.beginPath();
+
+        // Body — large, rounded
+        this.ctx.moveTo(size, -size * 0.05);
+        // Top curve
+        this.ctx.bezierCurveTo(size * 0.7, -size * 0.45, size * 0.1, -size * 0.5, -size * 0.3, -size * 0.3);
+        // Back slope to tail
+        this.ctx.bezierCurveTo(-size * 0.6, -size * 0.2, -size * 0.8, -size * 0.1, -size * 0.85, 0);
+        // Tail fluke (top)
+        this.ctx.lineTo(-size, -size * (0.3 + tailWag));
+        this.ctx.lineTo(-size * 0.8, size * 0.02);
+        // Tail fluke (bottom)
+        this.ctx.lineTo(-size, size * (0.35 - tailWag));
+        this.ctx.lineTo(-size * 0.85, size * 0.05);
+        // Bottom body
+        this.ctx.bezierCurveTo(-size * 0.6, size * 0.25, size * 0.1, size * 0.4, size, size * 0.05);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Belly (lighter underbelly)
+        this.ctx.fillStyle = 'rgba(50, 90, 140, 0.5)';
+        this.ctx.beginPath();
+        this.ctx.moveTo(size * 0.8, size * 0.05);
+        this.ctx.bezierCurveTo(size * 0.4, size * 0.3, -size * 0.2, size * 0.25, -size * 0.6, size * 0.1);
+        this.ctx.bezierCurveTo(-size * 0.2, size * 0.15, size * 0.4, size * 0.15, size * 0.8, size * 0.05);
+        this.ctx.fill();
+
+        // Pectoral fin
+        this.ctx.fillStyle = 'rgba(30, 60, 100, 1)';
+        this.ctx.beginPath();
+        this.ctx.moveTo(size * 0.3, size * 0.15);
+        this.ctx.bezierCurveTo(size * 0.2, size * 0.4, 0, size * 0.45, -size * 0.1, size * 0.2);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Eye
+        this.ctx.fillStyle = 'rgba(80, 140, 180, 0.6)';
+        this.ctx.beginPath();
+        this.ctx.arc(size * 0.7, -size * 0.05, size * 0.04, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
+    /**
+     * Render falling leaves (Forest theme)
+     */
+    _renderLeaves(t) {
+        const leafColors = [
+            [60, 140, 40],   // Green
+            [90, 160, 50],   // Light green
+            [50, 120, 30],   // Dark green
+            [140, 160, 40],  // Yellow-green
+            [170, 130, 40],  // Autumn gold
+        ];
+
+        for (const p of this.stars) {
+            // Drift downward
+            p.y += p.driftSpeed * 0.6;
+            // Gentle horizontal sway
+            p.x += Math.sin(t * p.wobbleSpeed + p.wobblePhase) * 0.4;
+            // Rotate slowly
+            p.rotation += p.rotationSpeed;
+
+            // Wrap around
+            if (p.y > this.canvas.height + 10) {
+                p.y = -10;
+                p.x = Math.random() * this.canvas.width;
+            }
+            if (p.x < -10) p.x = this.canvas.width + 10;
+            if (p.x > this.canvas.width + 10) p.x = -10;
+
+            const wobble = Math.sin(t * p.twinkleSpeed + p.twinklePhase);
+            const opacity = p.baseOpacity * (0.5 + wobble * 0.2);
+            const leafSize = p.size * 2 + 1;
+            const color = leafColors[p.leafType % leafColors.length];
+
+            this.ctx.save();
+            this.ctx.translate(p.x, p.y);
+            this.ctx.rotate(p.rotation);
+            this.ctx.globalAlpha = opacity;
+
+            // Draw a simple leaf shape
+            this.ctx.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+            this.ctx.beginPath();
+            // Leaf body using bezier curves
+            this.ctx.moveTo(0, -leafSize);
+            this.ctx.bezierCurveTo(
+                leafSize * 0.8, -leafSize * 0.5,
+                leafSize * 0.8, leafSize * 0.5,
+                0, leafSize
+            );
+            this.ctx.bezierCurveTo(
+                -leafSize * 0.8, leafSize * 0.5,
+                -leafSize * 0.8, -leafSize * 0.5,
+                0, -leafSize
+            );
+            this.ctx.fill();
+
+            // Leaf vein (center line)
+            this.ctx.strokeStyle = `rgba(${color[0] - 20}, ${color[1] - 20}, ${color[2] - 10}, ${opacity * 0.5})`;
+            this.ctx.lineWidth = 0.5;
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, -leafSize * 0.8);
+            this.ctx.lineTo(0, leafSize * 0.8);
+            this.ctx.stroke();
+
+            this.ctx.globalAlpha = 1;
+            this.ctx.restore();
         }
     }
 

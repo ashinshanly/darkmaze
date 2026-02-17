@@ -63,7 +63,7 @@ class Game {
         this.energyLossPerCollision = 0.03; // Lose ~3% per collision (about 33 hits to game over)
 
         // Time system
-        this.timeLimit = 180; // 3 minutes in seconds
+        this.timeLimit = 90; // 1.5 minutes in seconds
         this.startTime = Date.now();
         this.elapsedTime = 0;
         this.remainingTime = this.timeLimit;
@@ -762,7 +762,7 @@ class Game {
         this.startTime = Date.now();
         this.elapsedTime = 0;
         this.remainingTime = this.timeLimit;
-        this.hudTime.textContent = '3:00';
+        this.hudTime.textContent = '1:30';
 
         // Reset combo
         this.combo = 0;

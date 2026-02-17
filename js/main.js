@@ -19,6 +19,8 @@ class Game {
         this.gameOverScreen = document.getElementById('gameOverScreen');
         this.instructions = document.getElementById('instructions');
         this.hud = document.getElementById('hud');
+        this.startScreen = document.getElementById('startScreen');
+        this.beginBtn = document.getElementById('beginBtn');
 
         // UI for Leaderboard
         this.winLeaderboard = document.getElementById('winLeaderboard');
@@ -48,7 +50,7 @@ class Game {
         this.leaderboard = new Leaderboard();
 
         // Game state
-        this.state = 'playing'; // playing, winning, won, gameover
+        this.state = 'menu'; // menu, playing, winning, won, gameover
         this.winProgress = 0;
         this.pathProgress = 0;
         this.solutionPath = [];
@@ -93,12 +95,6 @@ class Game {
         // Start game loop
         requestAnimationFrame(this.gameLoop);
 
-        // Trigger start portal animation
-        setTimeout(() => {
-            const startPos = this.renderer.gridToScreen(this.maze.start.x, this.maze.start.y);
-            this.effects.triggerStartPortal(startPos.x, startPos.y);
-        }, 100);
-
         // Expose for debugging
         window.game = this;
     }
@@ -138,6 +134,11 @@ class Game {
         // Mobile touch controls
         this.setupMobileControls();
 
+        // Begin button
+        this.beginBtn.addEventListener('click', () => {
+            this.startGame();
+        });
+
         // Initialize audio on first click/key
         const initAudio = () => {
             this.audio.init();
@@ -146,6 +147,48 @@ class Game {
         };
         document.addEventListener('click', initAudio);
         document.addEventListener('keydown', initAudio);
+    }
+
+    /**
+     * Start the game from the menu
+     */
+    startGame() {
+        if (this.state !== 'menu') return;
+
+        // Transition visuals
+        this.startScreen.classList.add('hidden');
+        this.hud.classList.remove('hidden');
+        this.hud.classList.add('visible');
+
+        // Set state
+        this.state = 'playing';
+        this.startTime = Date.now();
+
+        // Show instructions briefly
+        this.instructions.classList.remove('fade-out');
+        setTimeout(() => {
+            this.instructions.classList.add('fade-out');
+        }, 5000);
+
+        // Trigger start portal animation
+        const startPos = this.renderer.gridToScreen(this.maze.start.x, this.maze.start.y);
+        this.effects.triggerStartPortal(startPos.x, startPos.y);
+
+        // Ensure audio works
+        this.audio.init();
+    }
+
+    /**
+     * Handle first move logic
+     */
+    onFirstMove() {
+        this.hasMovedOnce = true;
+        this.instructions.classList.add('fade-out');
+        this.startTime = Date.now();
+
+        // Ensure HUD is visible (in case it wasn't already)
+        this.hud.classList.remove('hidden');
+        this.hud.classList.add('visible');
     }
 
     /**
@@ -203,12 +246,9 @@ class Game {
         if (this.state !== 'playing' || !this.inputEnabled) return;
         if (!this.player.canAcceptInput()) return;
 
-        // First move - fade instructions and show HUD
+        // First move - fade instructions and start timer
         if (!this.hasMovedOnce) {
-            this.hasMovedOnce = true;
-            this.instructions.classList.add('fade-out');
-            this.hud.classList.add('visible');
-            this.startTime = Date.now();
+            this.onFirstMove();
         }
 
         // Check if move is blocked
@@ -235,6 +275,11 @@ class Game {
 
         if (this.state !== 'playing' || !this.inputEnabled) return;
         if (!this.player.canAcceptInput()) return;
+
+        // First move
+        if (!this.hasMovedOnce) {
+            this.onFirstMove();
+        }
 
         let direction = null;
         let dx = 0, dy = 0;
@@ -697,6 +742,11 @@ class Game {
         // Reset energy
         this.energy = 1.0;
         this.updateEnergyBar();
+
+        // Ensure UI is correct
+        this.startScreen.classList.add('hidden');
+        this.hud.classList.remove('hidden');
+        this.hud.classList.add('visible');
 
         // Reset time
         this.startTime = Date.now();

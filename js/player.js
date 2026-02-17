@@ -46,6 +46,8 @@ export class Player {
         this.glowIntensity = 1.0;
         this.rotationAngle = -Math.PI / 2; // Current visual angle
         this.targetRotation = -Math.PI / 2; // Target angle based on movement
+        this.rotationVelocity = 0; // For spring physics
+        this.leanAngle = 0; // For banking during turns
 
         // Collision reactivity
         this.collisionFlash = 0;   // 0→1 white flash on hit, decays
@@ -141,9 +143,11 @@ export class Player {
             const elapsed = currentTime - this.bounceStartTime;
             const progress = Math.min(elapsed / this.bounceDuration, 1);
 
-            // Bounce uses sine wave for back-and-forth
-            const bounceProgress = Math.sin(progress * Math.PI);
-            const bounceAmount = 0.15; // 15% of a tile
+            // Elastic bounce curve: fast hit, springy recovery
+            // Using a custom ease that peaks early
+            const b = progress;
+            const bounceProgress = Math.sin(Math.pow(b, 0.6) * Math.PI);
+            const bounceAmount = 0.12; // Adjusted for new curve
 
             this.renderX = this.gridX + this.bounceDirection.x * bounceAmount * bounceProgress;
             this.renderY = this.gridY + this.bounceDirection.y * bounceAmount * bounceProgress;
@@ -161,16 +165,28 @@ export class Player {
         // Update ghosts (fade out)
         this.updateGhosts(currentTime);
 
-        // Smooth rotation
+        // Damped spring rotation for organic feel
         let diff = this.targetRotation - this.rotationAngle;
+
         // Normalize angle difference to -PI..PI
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
 
-        if (Math.abs(diff) > 0.01) {
-            this.rotationAngle += diff * 0.15; // Smooth turn
-        } else {
+        // Spring constants
+        const stiffness = 0.22;
+        const damping = 0.65;
+
+        const friction = 0.88;
+        this.rotationVelocity += diff * stiffness;
+        this.rotationVelocity *= damping;
+        this.rotationAngle += this.rotationVelocity;
+
+        // Rotation-based leaning (banking)
+        this.leanAngle += (this.rotationVelocity * 0.8 - this.leanAngle) * 0.1;
+
+        if (Math.abs(diff) < 0.001 && Math.abs(this.rotationVelocity) < 0.001) {
             this.rotationAngle = this.targetRotation;
+            this.rotationVelocity = 0;
         }
 
         // Decay collision visual effects
@@ -300,5 +316,7 @@ export class Player {
         this.speedStretch = 0;
         this.rotationAngle = -Math.PI / 2;
         this.targetRotation = -Math.PI / 2;
+        this.rotationVelocity = 0;
+        this.leanAngle = 0;
     }
 }

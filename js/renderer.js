@@ -505,6 +505,7 @@ export class Renderer {
         const shake = reactivity.collisionShake || 0;
         const squash = reactivity.squashStretch || { x: 1, y: 1 };
         const speed = reactivity.speedStretch || 0;
+        const lean = reactivity.leanAngle || 0;
 
         this.ctx.save();
 
@@ -516,11 +517,14 @@ export class Renderer {
         // Apply squash/stretch deformation
         this.ctx.scale(squash.x, squash.y);
 
+        // Combined visual angle (rotation + banking lean)
+        const visualAngle = rotationAngle + lean;
+
         // Character rendering based on theme
         if (this.currentTheme === 'space') {
-            this.renderSpaceship(0, 0, color, glowIntensity, energy, rotationAngle, speed, flash);
+            this.renderSpaceship(0, 0, color, glowIntensity, energy, visualAngle, speed, flash);
         } else if (this.currentTheme === 'underwater') {
-            this.renderFish(0, 0, color, glowIntensity, energy, rotationAngle, speed, flash);
+            this.renderFish(0, 0, color, glowIntensity, energy, visualAngle, speed, flash);
         } else {
             // Default orb (Forest/Default)
             this.renderOrb(0, 0, color, glowIntensity, energy, flash);

@@ -83,6 +83,7 @@ class Game {
         this.inputEnabled = true;
         this.hasMovedOnce = false;
         this.scoreSubmitted = false;
+        this.moveBuffer = null; // Buffer for fluid movement transitions
 
         // Bind methods
         this.handleKeyDown = this.handleKeyDown.bind(this);
@@ -196,6 +197,9 @@ class Game {
         // Ensure HUD is visible (in case it wasn't already)
         this.hud.classList.remove('hidden');
         this.hud.classList.add('visible');
+
+        // Start ambient soundtrack
+        this.audio.startAmbient();
     }
 
     /**
@@ -250,27 +254,9 @@ class Game {
      * Handle mobile touch input
      */
     handleMobileInput(direction, dx, dy) {
-        if (this.state !== 'playing' || !this.inputEnabled) return;
-        if (!this.player.canAcceptInput()) return;
-
-        // First move - fade instructions and start timer
-        if (!this.hasMovedOnce) {
-            this.onFirstMove();
-        }
-
-        // Check if move is blocked
-        const blocked = this.maze.canMove(this.player.gridX, this.player.gridY, direction);
-
-        if (blocked) {
-            this.handleCollision(direction, dx, dy);
-        } else {
-            this.handleMove(dx, dy);
-        }
+        this.processInput(direction, dx, dy);
     }
 
-    /**
-     * Handle keyboard input
-     */
     handleKeyDown(e) {
         // Theme switching - works anytime
         if (e.key === 't' || e.key === 'T') {
@@ -281,12 +267,6 @@ class Game {
         }
 
         if (this.state !== 'playing' || !this.inputEnabled) return;
-        if (!this.player.canAcceptInput()) return;
-
-        // First move
-        if (!this.hasMovedOnce) {
-            this.onFirstMove();
-        }
 
         let direction = null;
         let dx = 0, dy = 0;
@@ -321,24 +301,46 @@ class Game {
         }
 
         e.preventDefault();
+        this.processInput(direction, dx, dy);
+    }
 
-        // First move - fade instructions and show HUD
-        if (!this.hasMovedOnce) {
-            this.hasMovedOnce = true;
-            this.instructions.classList.add('fade-out');
-            this.hud.classList.add('visible');
-            this.startTime = Date.now(); // Start timer on first move
-            this.audio.startAmbient(); // Start ambient soundtrack
+    /**
+     * Process input and decide whether to execute or buffer
+     */
+    processInput(direction, dx, dy) {
+        if (this.state !== 'playing' || !this.inputEnabled) return;
+
+        // Don't buffer if bouncing
+        if (this.player.isBouncing) return;
+
+        // If currently moving, buffer the next move if almost finished
+        if (this.player.isMoving) {
+            const elapsed = performance.now() - this.player.moveStartTime;
+            const progress = elapsed / this.player.moveDuration;
+
+            // Buffer if > 75% done
+            if (progress > 0.75) {
+                this.moveBuffer = { direction, dx, dy };
+            }
+            return;
         }
 
-        // Check if move is blocked
-        const blocked = this.maze.canMove(this.player.gridX, this.player.gridY, direction);
+        // Execute immediately
+        this.executeMove(direction, dx, dy);
+    }
 
+    /**
+     * Execute a move or collision
+     */
+    executeMove(direction, dx, dy) {
+        if (!this.hasMovedOnce) {
+            this.onFirstMove();
+        }
+
+        const blocked = this.maze.canMove(this.player.gridX, this.player.gridY, direction);
         if (blocked) {
-            // Collision!
             this.handleCollision(direction, dx, dy);
         } else {
-            // Valid move
             this.handleMove(dx, dy);
         }
     }
@@ -812,11 +814,21 @@ class Game {
      */
     gameLoop(currentTime) {
         // Update systems
-        this.player.update(currentTime);
+        // this.player.update(currentTime); // Player update is now conditional
 
-        // Update HUD
         if (this.state === 'playing') {
+            // Check buffered input
+            if (this.moveBuffer && !this.player.isMoving && !this.player.isBouncing) {
+                const { direction, dx, dy } = this.moveBuffer;
+                this.moveBuffer = null;
+                this.executeMove(direction, dx, dy);
+            }
+
             this.updateHUD();
+            this.player.update(currentTime);
+        } else {
+            // Still update player for rendering even if not 'playing' (e.g., during win sequence)
+            this.player.update(currentTime);
         }
 
         // Get player screen position
@@ -918,7 +930,8 @@ class Game {
                 collisionFlash: this.player.collisionFlash,
                 collisionShake: this.player.collisionShake,
                 squashStretch: this.player.squashStretch,
-                speedStretch: this.player.speedStretch
+                speedStretch: this.player.speedStretch,
+                leanAngle: this.player.leanAngle
             }
         );
     }

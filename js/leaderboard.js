@@ -1,5 +1,5 @@
 import { db } from './firebase-config.js';
-import { ref, push, query, orderByChild, limitToLast, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { ref, push, query, orderByChild, limitToLast, limitToFirst, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 export class Leaderboard {
     constructor() {
@@ -58,12 +58,17 @@ export class Leaderboard {
 
             const snapshot = await get(scoresQuery);
 
-            if (!snapshot.exists()) return [];
+            if (!snapshot.exists()) {
+                console.log("Leaderboard: No scores found in DB");
+                return [];
+            }
 
             const scores = [];
             snapshot.forEach((childSnapshot) => {
                 scores.push(childSnapshot.val());
             });
+
+            console.log("Leaderboard: Fetched scores", scores);
 
             // Client-side sort to be sure (and handle ties by time)
             scores.sort((a, b) => {

@@ -570,7 +570,7 @@ class Game {
     /**
      * Show win screen with stats
      */
-    showWinScreen() {
+    async showWinScreen() {
         this.state = 'won';
 
         // Calculate actual time taken
@@ -591,16 +591,45 @@ class Game {
         // Hide HUD
         this.hud.classList.add('hidden');
 
-        // Reset Name Entry UI
-        this.nameEntryForm.classList.remove('hidden');
-        this.winLeaderboard.innerHTML = ''; // Clear for now
-        this.playerNameInput.value = '';
-        this.submitScoreBtn.disabled = false;
-        this.submitScoreBtn.textContent = 'GO';
-        this.restartBtn.classList.add('hidden'); // Hide restart until submission or later
+        // Fetch and show leaderboard immediately
+        const topScores = await this.leaderboard.fetchTopScores();
+        this.leaderboard.render(this.winLeaderboard, topScores);
 
-        // Focus input
-        setTimeout(() => this.playerNameInput.focus(), 500);
+        // Check if high score
+        let isHighScore = false;
+        if (topScores.length < 5) {
+            isHighScore = true;
+        } else {
+            // Check against the last one (worst of the best)
+            const worstScore = topScores[topScores.length - 1];
+            if (this.player.moveCount < worstScore.moves) {
+                isHighScore = true;
+            } else if (this.player.moveCount === worstScore.moves && timeTaken < worstScore.time) {
+                isHighScore = true;
+            }
+        }
+
+        if (isHighScore) {
+            // Show Name Entry UI
+            this.nameEntryForm.classList.remove('hidden');
+            this.playerNameInput.value = '';
+            this.submitScoreBtn.disabled = false;
+            this.submitScoreBtn.textContent = 'GO';
+            this.restartBtn.classList.add('hidden');
+
+            // Focus input
+            setTimeout(() => this.playerNameInput.focus(), 500);
+        } else {
+            // No high score, just show restart
+            this.nameEntryForm.classList.add('hidden');
+            this.restartBtn.classList.remove('hidden');
+            this.inviteToRetry("Rank: Unranked");
+        }
+    }
+
+    inviteToRetry(msg) {
+        // Optional: Add a small message if they didn't make the cut
+        // For now, we just ensure the form is hidden and restart button is visible
     }
 
     /**

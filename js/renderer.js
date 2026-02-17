@@ -384,6 +384,9 @@ export class Renderer {
             this.ctx.arc(star.x, star.y, star.size * 0.5, 0, Math.PI * 2);
             this.ctx.fill();
         }
+
+        // Render background space objects
+        this._updateAndRenderBgObjects(t);
     }
 
     /**
@@ -441,52 +444,61 @@ export class Renderer {
         }
 
         // Render background sea creatures
-        this._updateAndRenderCreatures(t);
+        this._updateAndRenderBgObjects(t);
     }
 
     /**
-     * Spawn, update, and render background sea creatures
+     * Spawn, update, and render background objects (sea creatures or space objects)
      */
-    _updateAndRenderCreatures(t) {
+    _updateAndRenderBgObjects(t) {
         const now = performance.now();
 
-        // Spawn new creature occasionally (max 3 on screen)
+        // Spawn new object occasionally (max 3 on screen)
         if (now - this._lastCreatureSpawn > this._creatureSpawnInterval && this.bgCreatures.length < 3) {
-            this._spawnCreature();
+            if (this.currentTheme === 'underwater') {
+                this._spawnCreature();
+            } else if (this.currentTheme === 'space') {
+                this._spawnSpaceObject();
+            }
             this._lastCreatureSpawn = now;
             this._creatureSpawnInterval = 3000 + Math.random() * 4000;
         }
 
-        // Update and render each creature
+        // Update and render each object
         for (let i = this.bgCreatures.length - 1; i >= 0; i--) {
             const c = this.bgCreatures[i];
 
             // Move horizontally
             c.x += c.speed;
 
-            // Gentle vertical bobbing
+            // Gentle vertical drift
             c.y += Math.sin(t * c.bobSpeed + c.bobPhase) * 0.3;
 
+            // Rotate if applicable (Saturn, satellite)
+            if (c.spin) c.rotation = (c.rotation || 0) + c.spin;
+
             // Remove if off screen
-            if ((c.speed > 0 && c.x > this.canvas.width + 100) ||
-                (c.speed < 0 && c.x < -100)) {
+            if ((c.speed > 0 && c.x > this.canvas.width + 150) ||
+                (c.speed < 0 && c.x < -150)) {
                 this.bgCreatures.splice(i, 1);
                 continue;
             }
 
-            // Render the creature
+            // Render the object
             this.ctx.save();
             this.ctx.translate(c.x, c.y);
-            // Flip horizontally if swimming left
             if (c.speed < 0) this.ctx.scale(-1, 1);
             this.ctx.globalAlpha = c.opacity;
 
-            if (c.type === 'shark') {
-                this._drawSharkSilhouette(c.size, t);
-            } else if (c.type === 'turtle') {
-                this._drawTurtleSilhouette(c.size, t);
-            } else {
-                this._drawWhaleSilhouette(c.size, t);
+            // Draw based on type
+            switch (c.type) {
+                case 'shark': this._drawSharkSilhouette(c.size, t); break;
+                case 'turtle': this._drawTurtleSilhouette(c.size, t); break;
+                case 'whale': this._drawWhaleSilhouette(c.size, t); break;
+                case 'ufo': this._drawUFO(c.size, t); break;
+                case 'saturn': this._drawSaturn(c.size, t); break;
+                case 'satellite': this._drawSatellite(c.size, t); break;
+                case 'cruiser': this._drawCruiser(c.size, t); break;
             }
 
             this.ctx.globalAlpha = 1;
@@ -523,6 +535,300 @@ export class Renderer {
             bobSpeed: 0.3 + Math.random() * 0.5,
             bobPhase: Math.random() * Math.PI * 2
         });
+    }
+
+    /**
+     * Draw a shark silhouette
+     */
+
+    /**
+     * Spawn a random space object off-screen
+     */
+    _spawnSpaceObject() {
+        const types = ['ufo', 'saturn', 'satellite', 'cruiser'];
+        const type = types[Math.floor(Math.random() * types.length)];
+
+        const sizeMap = { ufo: 20 + Math.random() * 15, saturn: 25 + Math.random() * 15, satellite: 15 + Math.random() * 10, cruiser: 22 + Math.random() * 14 };
+        const speedMap = { ufo: 0.4 + Math.random() * 0.5, saturn: 0.15 + Math.random() * 0.1, satellite: 0.6 + Math.random() * 0.4, cruiser: 0.35 + Math.random() * 0.3 };
+
+        const fromLeft = Math.random() > 0.5;
+        const speed = fromLeft ? speedMap[type] : -speedMap[type];
+        const startX = fromLeft ? -100 : this.canvas.width + 100;
+        const y = 100 + Math.random() * (this.canvas.height - 280);
+
+        this.bgCreatures.push({
+            type,
+            x: startX,
+            y,
+            size: sizeMap[type],
+            speed,
+            opacity: 0.25 + Math.random() * 0.2,
+            bobSpeed: 0.2 + Math.random() * 0.4,
+            bobPhase: Math.random() * Math.PI * 2,
+            spin: type === 'satellite' ? 0.005 + Math.random() * 0.005 : 0,
+            rotation: Math.random() * Math.PI * 2
+        });
+    }
+
+    /**
+     * Draw a UFO (classic flying saucer)
+     */
+    _drawUFO(size, t) {
+        const hover = Math.sin(t * 4) * size * 0.05;
+
+        this.ctx.save();
+        this.ctx.translate(0, hover);
+
+        // Saucer body
+        this.ctx.fillStyle = 'rgba(120, 140, 180, 1)';
+        this.ctx.beginPath();
+        this.ctx.ellipse(0, 0, size, size * 0.25, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Dome
+        this.ctx.fillStyle = 'rgba(160, 200, 240, 0.8)';
+        this.ctx.beginPath();
+        this.ctx.ellipse(0, -size * 0.15, size * 0.45, size * 0.35, 0, Math.PI, 0);
+        this.ctx.fill();
+
+        // Dome highlight
+        this.ctx.fillStyle = 'rgba(200, 230, 255, 0.4)';
+        this.ctx.beginPath();
+        this.ctx.ellipse(-size * 0.1, -size * 0.3, size * 0.12, size * 0.08, -0.3, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Rim lights
+        const lightCount = 5;
+        for (let i = 0; i < lightCount; i++) {
+            const angle = (i / lightCount) * Math.PI + (t * 2 % (Math.PI * 2));
+            const lx = Math.cos(angle) * size * 0.75;
+            const ly = Math.sin(angle) * size * 0.15;
+            const blink = Math.sin(t * 5 + i) > 0 ? 0.8 : 0.2;
+            this.ctx.fillStyle = `rgba(100, 255, 200, ${blink})`;
+            this.ctx.beginPath();
+            this.ctx.arc(lx, ly, size * 0.04, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+
+        // Tractor beam (pulsing)
+        const beamOpacity = (Math.sin(t * 2) * 0.5 + 0.5) * 0.15;
+        const grad = this.ctx.createLinearGradient(0, size * 0.1, 0, size * 0.8);
+        grad.addColorStop(0, `rgba(100, 255, 200, ${beamOpacity})`);
+        grad.addColorStop(1, 'rgba(100, 255, 200, 0)');
+        this.ctx.fillStyle = grad;
+        this.ctx.beginPath();
+        this.ctx.moveTo(-size * 0.3, size * 0.12);
+        this.ctx.lineTo(size * 0.3, size * 0.12);
+        this.ctx.lineTo(size * 0.6, size * 0.8);
+        this.ctx.lineTo(-size * 0.6, size * 0.8);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        this.ctx.restore();
+    }
+
+    /**
+     * Draw Saturn (planet with ring)
+     */
+    _drawSaturn(size, t) {
+        // Planet body
+        const grad = this.ctx.createRadialGradient(
+            -size * 0.15, -size * 0.1, 0,
+            0, 0, size * 0.55
+        );
+        grad.addColorStop(0, 'rgba(210, 180, 140, 1)');
+        grad.addColorStop(0.5, 'rgba(180, 150, 100, 1)');
+        grad.addColorStop(1, 'rgba(140, 110, 70, 1)');
+        this.ctx.fillStyle = grad;
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, size * 0.5, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Planet bands
+        this.ctx.strokeStyle = 'rgba(160, 130, 80, 0.4)';
+        this.ctx.lineWidth = size * 0.04;
+        for (let i = -2; i <= 2; i++) {
+            this.ctx.beginPath();
+            this.ctx.ellipse(0, i * size * 0.1, size * 0.48, size * 0.06, 0, 0, Math.PI * 2);
+            this.ctx.stroke();
+        }
+
+        // Ring (behind planet - bottom half)
+        this.ctx.save();
+        this.ctx.rotate(0.4); // Tilt the ring
+        this.ctx.strokeStyle = 'rgba(200, 180, 150, 0.6)';
+        this.ctx.lineWidth = size * 0.08;
+        this.ctx.beginPath();
+        this.ctx.ellipse(0, 0, size * 1.0, size * 0.18, 0, 0, Math.PI);
+        this.ctx.stroke();
+
+        // Outer ring
+        this.ctx.strokeStyle = 'rgba(180, 160, 130, 0.35)';
+        this.ctx.lineWidth = size * 0.05;
+        this.ctx.beginPath();
+        this.ctx.ellipse(0, 0, size * 1.15, size * 0.22, 0, 0, Math.PI);
+        this.ctx.stroke();
+
+        // Ring (in front of planet - top half)
+        this.ctx.strokeStyle = 'rgba(200, 180, 150, 0.7)';
+        this.ctx.lineWidth = size * 0.08;
+        this.ctx.beginPath();
+        this.ctx.ellipse(0, 0, size * 1.0, size * 0.18, 0, Math.PI, Math.PI * 2);
+        this.ctx.stroke();
+
+        this.ctx.strokeStyle = 'rgba(180, 160, 130, 0.4)';
+        this.ctx.lineWidth = size * 0.05;
+        this.ctx.beginPath();
+        this.ctx.ellipse(0, 0, size * 1.15, size * 0.22, 0, Math.PI, Math.PI * 2);
+        this.ctx.stroke();
+        this.ctx.restore();
+    }
+
+    /**
+     * Draw a satellite
+     */
+    _drawSatellite(size, t) {
+        this.ctx.save();
+        this.ctx.rotate(Math.sin(t * 0.5) * 0.3);
+
+        // Central body
+        this.ctx.fillStyle = 'rgba(150, 160, 180, 1)';
+        this.ctx.fillRect(-size * 0.2, -size * 0.15, size * 0.4, size * 0.3);
+
+        // Solar panel left
+        this.ctx.fillStyle = 'rgba(50, 60, 120, 1)';
+        this.ctx.fillRect(-size * 0.9, -size * 0.25, size * 0.6, size * 0.5);
+        // Panel grid
+        this.ctx.strokeStyle = 'rgba(80, 100, 160, 0.6)';
+        this.ctx.lineWidth = 0.5;
+        for (let i = 0; i < 3; i++) {
+            const px = -size * 0.9 + (i + 1) * size * 0.15;
+            this.ctx.beginPath();
+            this.ctx.moveTo(px, -size * 0.25);
+            this.ctx.lineTo(px, size * 0.25);
+            this.ctx.stroke();
+        }
+        this.ctx.beginPath();
+        this.ctx.moveTo(-size * 0.9, 0);
+        this.ctx.lineTo(-size * 0.3, 0);
+        this.ctx.stroke();
+
+        // Solar panel right
+        this.ctx.fillStyle = 'rgba(50, 60, 120, 1)';
+        this.ctx.fillRect(size * 0.3, -size * 0.25, size * 0.6, size * 0.5);
+        // Panel grid
+        for (let i = 0; i < 3; i++) {
+            const px = size * 0.3 + (i + 1) * size * 0.15;
+            this.ctx.beginPath();
+            this.ctx.moveTo(px, -size * 0.25);
+            this.ctx.lineTo(px, size * 0.25);
+            this.ctx.stroke();
+        }
+        this.ctx.beginPath();
+        this.ctx.moveTo(size * 0.3, 0);
+        this.ctx.lineTo(size * 0.9, 0);
+        this.ctx.stroke();
+
+        // Panel connectors (arms)
+        this.ctx.fillStyle = 'rgba(130, 140, 160, 1)';
+        this.ctx.fillRect(-size * 0.3, -size * 0.03, size * 0.1, size * 0.06);
+        this.ctx.fillRect(size * 0.2, -size * 0.03, size * 0.1, size * 0.06);
+
+        // Antenna
+        this.ctx.strokeStyle = 'rgba(180, 190, 200, 0.8)';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, -size * 0.15);
+        this.ctx.lineTo(0, -size * 0.5);
+        this.ctx.stroke();
+
+        // Antenna dish
+        this.ctx.fillStyle = 'rgba(180, 190, 210, 0.7)';
+        this.ctx.beginPath();
+        this.ctx.arc(0, -size * 0.5, size * 0.08, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Blinking light
+        const blink = Math.sin(t * 3) > 0 ? 0.9 : 0.1;
+        this.ctx.fillStyle = `rgba(255, 80, 80, ${blink})`;
+        this.ctx.beginPath();
+        this.ctx.arc(0, -size * 0.15, size * 0.04, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        this.ctx.restore();
+    }
+
+    /**
+     * Draw a space cruiser / small ship
+     */
+    _drawCruiser(size, t) {
+        // Main hull — wedge shape
+        this.ctx.fillStyle = 'rgba(100, 110, 130, 1)';
+        this.ctx.beginPath();
+        this.ctx.moveTo(size, 0);
+        this.ctx.lineTo(size * 0.3, -size * 0.2);
+        this.ctx.lineTo(-size * 0.6, -size * 0.25);
+        this.ctx.lineTo(-size * 0.8, -size * 0.15);
+        this.ctx.lineTo(-size * 0.8, size * 0.15);
+        this.ctx.lineTo(-size * 0.6, size * 0.25);
+        this.ctx.lineTo(size * 0.3, size * 0.2);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Cockpit window
+        this.ctx.fillStyle = 'rgba(150, 200, 255, 0.7)';
+        this.ctx.beginPath();
+        this.ctx.moveTo(size * 0.85, 0);
+        this.ctx.lineTo(size * 0.5, -size * 0.08);
+        this.ctx.lineTo(size * 0.5, size * 0.08);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Engine nacelle top
+        this.ctx.fillStyle = 'rgba(80, 90, 110, 1)';
+        this.ctx.beginPath();
+        this.ctx.moveTo(-size * 0.3, -size * 0.2);
+        this.ctx.lineTo(-size * 0.5, -size * 0.4);
+        this.ctx.lineTo(-size * 0.9, -size * 0.4);
+        this.ctx.lineTo(-size * 0.9, -size * 0.2);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Engine nacelle bottom
+        this.ctx.beginPath();
+        this.ctx.moveTo(-size * 0.3, size * 0.2);
+        this.ctx.lineTo(-size * 0.5, size * 0.4);
+        this.ctx.lineTo(-size * 0.9, size * 0.4);
+        this.ctx.lineTo(-size * 0.9, size * 0.2);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Engine glow (top)
+        const glowPulse = 0.5 + Math.sin(t * 6) * 0.3;
+        const engGrad1 = this.ctx.createRadialGradient(-size * 0.9, -size * 0.3, 0, -size * 0.9, -size * 0.3, size * 0.15);
+        engGrad1.addColorStop(0, `rgba(100, 180, 255, ${glowPulse})`);
+        engGrad1.addColorStop(1, 'rgba(100, 180, 255, 0)');
+        this.ctx.fillStyle = engGrad1;
+        this.ctx.beginPath();
+        this.ctx.arc(-size * 0.9, -size * 0.3, size * 0.15, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Engine glow (bottom)
+        const engGrad2 = this.ctx.createRadialGradient(-size * 0.9, size * 0.3, 0, -size * 0.9, size * 0.3, size * 0.15);
+        engGrad2.addColorStop(0, `rgba(100, 180, 255, ${glowPulse})`);
+        engGrad2.addColorStop(1, 'rgba(100, 180, 255, 0)');
+        this.ctx.fillStyle = engGrad2;
+        this.ctx.beginPath();
+        this.ctx.arc(-size * 0.9, size * 0.3, size * 0.15, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Hull detail line
+        this.ctx.strokeStyle = 'rgba(130, 140, 160, 0.5)';
+        this.ctx.lineWidth = 0.8;
+        this.ctx.beginPath();
+        this.ctx.moveTo(size * 0.6, 0);
+        this.ctx.lineTo(-size * 0.6, 0);
+        this.ctx.stroke();
     }
 
     /**
@@ -1228,6 +1534,8 @@ export class Renderer {
             this.currentTheme = themeName;
             // Regenerate starfield with theme colors
             this.stars = this.createStarfield();
+            // Clear background objects from previous theme
+            this.bgCreatures = [];
         }
     }
 

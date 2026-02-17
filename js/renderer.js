@@ -65,7 +65,7 @@ export class Renderer {
                 starHue: 60
             }
         };
-        this.currentTheme = 'space';
+        this.currentTheme = 'underwater';
 
         // Responsive avatar sizing
         this._avatarScale = 0.28;

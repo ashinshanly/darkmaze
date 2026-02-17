@@ -146,14 +146,19 @@ class Game {
             this.startGame();
         });
 
-        // Initialize audio on first click/key
+        // Initialize audio on first user interaction (including touch for mobile)
         const initAudio = () => {
             this.audio.init();
+            this.audio.resume();
             document.removeEventListener('click', initAudio);
             document.removeEventListener('keydown', initAudio);
+            document.removeEventListener('touchstart', initAudio);
+            document.removeEventListener('touchend', initAudio);
         };
         document.addEventListener('click', initAudio);
         document.addEventListener('keydown', initAudio);
+        document.addEventListener('touchstart', initAudio);
+        document.addEventListener('touchend', initAudio);
     }
 
     /**
@@ -182,8 +187,9 @@ class Game {
         const startPos = this.renderer.gridToScreen(this.maze.start.x, this.maze.start.y);
         this.effects.triggerStartPortal(startPos.x, startPos.y);
 
-        // Ensure audio works
+        // Ensure audio works (init + resume for mobile)
         this.audio.init();
+        this.audio.resume();
     }
 
     /**
@@ -198,7 +204,8 @@ class Game {
         this.hud.classList.remove('hidden');
         this.hud.classList.add('visible');
 
-        // Start ambient soundtrack
+        // Start ambient soundtrack (resume context first for mobile)
+        this.audio.resume();
         this.audio.startAmbient();
     }
 
@@ -221,6 +228,9 @@ class Game {
             btn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 btn.classList.add('pressed');
+                // Ensure audio is initialized on mobile touch
+                this.audio.init();
+                this.audio.resume();
                 this.handleMobileInput(direction, dx, dy);
             });
 

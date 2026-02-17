@@ -33,6 +33,9 @@ export class Audio {
             this.masterGain.gain.value = 0.3;
             this.masterGain.connect(this.ctx.destination);
             this.initialized = true;
+
+            // Immediately try to resume (mobile browsers start suspended)
+            this.resume();
         } catch (e) {
             console.warn('Web Audio API not supported');
             this.enabled = false;
@@ -40,11 +43,25 @@ export class Audio {
     }
 
     /**
-     * Resume audio context if suspended
+     * Resume audio context if suspended (required for mobile browsers)
      */
-    async resume() {
-        if (this.ctx && this.ctx.state === 'suspended') {
-            await this.ctx.resume();
+    resume() {
+        if (!this.ctx) return;
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume().catch(() => { });
+        }
+        // iOS Safari sometimes needs a silent buffer played to unlock audio
+        if (!this._unlocked) {
+            try {
+                const buffer = this.ctx.createBuffer(1, 1, 22050);
+                const source = this.ctx.createBufferSource();
+                source.buffer = buffer;
+                source.connect(this.ctx.destination);
+                source.start(0);
+                this._unlocked = true;
+            } catch (e) {
+                // Ignore errors
+            }
         }
     }
 

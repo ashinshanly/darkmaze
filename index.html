@@ -65,21 +65,9 @@
                 <span>You made <strong id="goMoves">0</strong> moves</span>
             </div>
 
-            <!-- Leaderboard -->
-            <div class="leaderboard">
-                <h3 class="leaderboard-title">Leaderboard</h3>
-                <div class="leaderboard-entry">
-                    <span class="leaderboard-rank">1</span>
-                    <span class="leaderboard-name">Vaishnavi</span>
-                    <span class="leaderboard-moves">24 moves</span>
-                    <span class="leaderboard-time">0:26</span>
-                </div>
-                <div class="leaderboard-entry">
-                    <span class="leaderboard-rank">2</span>
-                    <span class="leaderboard-name">Ashin</span>
-                    <span class="leaderboard-moves">25 moves</span>
-                    <span class="leaderboard-time">0:33</span>
-                </div>
+            <!-- Leaderboard (Dynamic) -->
+            <div id="gameOverLeaderboard" class="leaderboard-container">
+                <div class="leaderboard-loading">Loading scores...</div>
             </div>
 
             <button id="retryBtn">Try Again</button>
@@ -100,24 +88,22 @@
                         id="statTime">0:00</span></div>
             </div>
 
-            <!-- Leaderboard -->
-            <div class="leaderboard">
-                <h3 class="leaderboard-title">Leaderboard</h3>
-                <div class="leaderboard-entry">
-                    <span class="leaderboard-rank">1</span>
-                    <span class="leaderboard-name">Vaishnavi</span>
-                    <span class="leaderboard-moves">24 moves</span>
-                    <span class="leaderboard-time">0:26</span>
-                </div>
-                <div class="leaderboard-entry">
-                    <span class="leaderboard-rank">2</span>
-                    <span class="leaderboard-name">Ashin</span>
-                    <span class="leaderboard-moves">25 moves</span>
-                    <span class="leaderboard-time">0:33</span>
+            <!-- Leaderboard (Dynamic) -->
+            <div id="winLeaderboard" class="leaderboard-container">
+                <div class="leaderboard-loading">Loading scores...</div>
+            </div>
+
+            <!-- Name Entry Form -->
+            <div id="nameEntryForm" class="name-entry-container">
+                <h3 class="name-entry-title">Eternalize Your Run</h3>
+                <div class="input-group">
+                    <input type="text" id="playerNameInput" placeholder="Enter your name" maxlength="15"
+                        autocomplete="off">
+                    <button id="submitScoreBtn">GO</button>
                 </div>
             </div>
 
-            <button id="restartBtn">Enter Again</button>
+            <button id="restartBtn" class="hidden">Enter Again</button>
         </div>
     </div>
 

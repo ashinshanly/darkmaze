@@ -10,6 +10,7 @@ import { ParticleSystem } from './particles.js';
 import { Renderer } from './renderer.js';
 import { Effects } from './effects.js';
 import { Audio } from './audio.js';
+import { Leaderboard } from './leaderboard.js';
 
 class Game {
     constructor() {
@@ -18,6 +19,14 @@ class Game {
         this.gameOverScreen = document.getElementById('gameOverScreen');
         this.instructions = document.getElementById('instructions');
         this.hud = document.getElementById('hud');
+
+        // UI for Leaderboard
+        this.winLeaderboard = document.getElementById('winLeaderboard');
+        this.gameOverLeaderboard = document.getElementById('gameOverLeaderboard');
+        this.nameEntryForm = document.getElementById('nameEntryForm');
+        this.playerNameInput = document.getElementById('playerNameInput');
+        this.submitScoreBtn = document.getElementById('submitScoreBtn');
+        this.restartBtn = document.getElementById('restartBtn');
 
         // HUD elements
         this.hudMoves = document.getElementById('hudMoves');
@@ -36,6 +45,7 @@ class Game {
         this.particles = new ParticleSystem(this.canvas);
         this.effects = new Effects();
         this.audio = new Audio();
+        this.leaderboard = new Leaderboard();
 
         // Game state
         this.state = 'playing'; // playing, winning, won, gameover
@@ -69,6 +79,7 @@ class Game {
         // Input state
         this.inputEnabled = true;
         this.hasMovedOnce = false;
+        this.scoreSubmitted = false;
 
         // Bind methods
         this.handleKeyDown = this.handleKeyDown.bind(this);
@@ -100,8 +111,13 @@ class Game {
         window.addEventListener('resize', this.handleResize);
 
         // Restart button (win screen)
-        document.getElementById('restartBtn').addEventListener('click', () => {
+        this.restartBtn.addEventListener('click', () => {
             this.restart();
+        });
+
+        // Submit Score button
+        this.submitScoreBtn.addEventListener('click', () => {
+            this.submitScore();
         });
 
         // Retry button (game over screen)
@@ -211,6 +227,8 @@ class Game {
     handleKeyDown(e) {
         // Theme switching - works anytime
         if (e.key === 't' || e.key === 'T') {
+            // Don't switch theme if typing name
+            if (document.activeElement === this.playerNameInput) return;
             this.cycleTheme();
             return;
         }
@@ -246,6 +264,9 @@ class Game {
                 direction = 'e';
                 dx = 1;
                 break;
+            case '0':
+                this.triggerWin();
+                return;
             default:
                 return;
         }
@@ -524,6 +545,9 @@ class Game {
 
         // Hide HUD
         this.hud.classList.add('hidden');
+
+        // Fetch leaderboard info for game over (read-only)
+        this.leaderboard.render(this.gameOverLeaderboard);
     }
 
     /**
@@ -566,6 +590,49 @@ class Game {
 
         // Hide HUD
         this.hud.classList.add('hidden');
+
+        // Reset Name Entry UI
+        this.nameEntryForm.classList.remove('hidden');
+        this.winLeaderboard.innerHTML = ''; // Clear for now
+        this.playerNameInput.value = '';
+        this.submitScoreBtn.disabled = false;
+        this.submitScoreBtn.textContent = 'GO';
+        this.restartBtn.classList.add('hidden'); // Hide restart until submission or later
+
+        // Focus input
+        setTimeout(() => this.playerNameInput.focus(), 500);
+    }
+
+    /**
+     * Submit score to leaderboard
+     */
+    async submitScore() {
+        if (this.scoreSubmitted) return;
+
+        const name = this.playerNameInput.value;
+        if (!name || name.trim() === '') {
+            this.showMessage("Please enter a name");
+            return;
+        }
+
+        this.submitScoreBtn.disabled = true;
+        this.submitScoreBtn.textContent = '...';
+
+        const timeTaken = this.timeLimit - this.remainingTime;
+        const success = await this.leaderboard.submitScore(name, this.player.moveCount, timeTaken);
+
+        if (success) {
+            this.scoreSubmitted = true;
+            this.nameEntryForm.classList.add('hidden');
+            this.restartBtn.classList.remove('hidden');
+
+            // Render leaderboard
+            this.leaderboard.render(this.winLeaderboard);
+        } else {
+            this.submitScoreBtn.disabled = false;
+            this.submitScoreBtn.textContent = 'Retry';
+            this.showMessage("Error submitting score");
+        }
     }
 
     /**
@@ -599,6 +666,7 @@ class Game {
         this.pathProgress = 0;
         this.solutionPath = [];
         this.hasMovedOnce = false;
+        this.scoreSubmitted = false;
 
         // Reset energy
         this.energy = 1.0;

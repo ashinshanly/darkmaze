@@ -264,9 +264,6 @@ class Game {
                 direction = 'e';
                 dx = 1;
                 break;
-            case '0':
-                this.triggerWin();
-                return;
             default:
                 return;
         }

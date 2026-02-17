@@ -59,7 +59,6 @@ export class Leaderboard {
             const snapshot = await get(scoresQuery);
 
             if (!snapshot.exists()) {
-                console.log("Leaderboard: No scores found in DB");
                 return [];
             }
 
@@ -67,8 +66,6 @@ export class Leaderboard {
             snapshot.forEach((childSnapshot) => {
                 scores.push(childSnapshot.val());
             });
-
-            console.log("Leaderboard: Fetched scores", scores);
 
             // Client-side sort to be sure (and handle ties by time)
             scores.sort((a, b) => {

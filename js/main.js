@@ -29,6 +29,7 @@ class Game {
         this.playerNameInput = document.getElementById('playerNameInput');
         this.submitScoreBtn = document.getElementById('submitScoreBtn');
         this.restartBtn = document.getElementById('restartBtn');
+        this.quickRestartBtn = document.getElementById('quickRestart');
 
         // HUD elements
         this.hudMoves = document.getElementById('hudMoves');
@@ -134,6 +135,11 @@ class Game {
         // Mobile touch controls
         this.setupMobileControls();
 
+        // Quick Restart button
+        this.quickRestartBtn.addEventListener('click', () => {
+            this.restart();
+        });
+
         // Begin button
         this.beginBtn.addEventListener('click', () => {
             this.startGame();
@@ -159,6 +165,7 @@ class Game {
         this.startScreen.classList.add('hidden');
         this.hud.classList.remove('hidden');
         this.hud.classList.add('visible');
+        this.quickRestartBtn.classList.remove('hidden');
 
         // Set state
         this.state = 'playing';
@@ -597,6 +604,7 @@ class Game {
      */
     triggerWin() {
         this.state = 'winning';
+        this.quickRestartBtn.classList.add('hidden');
 
         // Play win sound
         this.audio.playWin();
@@ -747,6 +755,7 @@ class Game {
         this.startScreen.classList.add('hidden');
         this.hud.classList.remove('hidden');
         this.hud.classList.add('visible');
+        this.quickRestartBtn.classList.remove('hidden');
 
         // Reset time
         this.startTime = Date.now();

@@ -46,6 +46,12 @@ export class Player {
         this.glowIntensity = 1.0;
         this.rotationAngle = -Math.PI / 2; // Current visual angle
         this.targetRotation = -Math.PI / 2; // Target angle based on movement
+
+        // Collision reactivity
+        this.collisionFlash = 0;   // 0→1 white flash on hit, decays
+        this.collisionShake = 0;   // 0→1 random shake magnitude, decays
+        this.squashStretch = { x: 1, y: 1 }; // Squash/stretch deformation
+        this.speedStretch = 0;     // 0→1 stretch in movement direction
     }
 
     /**
@@ -87,6 +93,17 @@ export class Player {
 
         // Decrease glow intensity slightly on collision
         this.glowIntensity = Math.max(0.5, this.glowIntensity - 0.05);
+
+        // Trigger collision visual reactivity
+        this.collisionFlash = 1.0;
+        this.collisionShake = 1.0;
+
+        // Squash in collision direction, stretch perpendicular
+        if (Math.abs(direction.x) > 0) {
+            this.squashStretch = { x: 0.6, y: 1.3 };
+        } else {
+            this.squashStretch = { x: 1.3, y: 0.6 };
+        }
     }
 
     /**
@@ -143,6 +160,7 @@ export class Player {
 
         // Update ghosts (fade out)
         this.updateGhosts(currentTime);
+
         // Smooth rotation
         let diff = this.targetRotation - this.rotationAngle;
         // Normalize angle difference to -PI..PI
@@ -153,6 +171,25 @@ export class Player {
             this.rotationAngle += diff * 0.15; // Smooth turn
         } else {
             this.rotationAngle = this.targetRotation;
+        }
+
+        // Decay collision visual effects
+        this.collisionFlash *= 0.88;
+        if (this.collisionFlash < 0.01) this.collisionFlash = 0;
+
+        this.collisionShake *= 0.85;
+        if (this.collisionShake < 0.01) this.collisionShake = 0;
+
+        // Squash/stretch decays back to (1, 1)
+        this.squashStretch.x += (1 - this.squashStretch.x) * 0.12;
+        this.squashStretch.y += (1 - this.squashStretch.y) * 0.12;
+
+        // Speed stretch based on movement
+        if (this.isMoving) {
+            this.speedStretch = Math.min(1, this.speedStretch + 0.15);
+        } else {
+            this.speedStretch *= 0.85;
+            if (this.speedStretch < 0.01) this.speedStretch = 0;
         }
 
         // Slowly recover glow intensity
@@ -257,5 +294,11 @@ export class Player {
         this.collisionCount = 0;
         this.startTime = Date.now();
         this.glowIntensity = 1.0;
+        this.collisionFlash = 0;
+        this.collisionShake = 0;
+        this.squashStretch = { x: 1, y: 1 };
+        this.speedStretch = 0;
+        this.rotationAngle = -Math.PI / 2;
+        this.targetRotation = -Math.PI / 2;
     }
 }

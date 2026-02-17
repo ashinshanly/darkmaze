@@ -371,6 +371,9 @@ class Game {
         const newX = this.player.gridX + dx;
         const newY = this.player.gridY + dy;
 
+        // Update rotation to face movement direction
+        this.player.targetRotation = Math.atan2(dy, dx);
+
         // Update player movement
         this.player.moveFrom = { x: this.player.gridX, y: this.player.gridY };
         this.player.moveTo = { x: newX, y: newY };
@@ -397,6 +400,9 @@ class Game {
      * Handle wall collision
      */
     handleCollision(direction, dx, dy) {
+        // Update rotation to face collision direction
+        this.player.targetRotation = Math.atan2(dy, dx);
+
         // Bounce player
         this.player.bounce({ x: dx, y: dy });
         this.player.collisionCount++;
@@ -907,7 +913,13 @@ class Game {
             this.player.renderY,
             this.player.glowIntensity,
             this.energy,
-            this.player.rotationAngle // Pass rotation for characters
+            this.player.rotationAngle,
+            {
+                collisionFlash: this.player.collisionFlash,
+                collisionShake: this.player.collisionShake,
+                squashStretch: this.player.squashStretch,
+                speedStretch: this.player.speedStretch
+            }
         );
     }
 }

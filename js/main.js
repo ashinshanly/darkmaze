@@ -592,8 +592,9 @@ class Game {
         void this.gameOverScreen.offsetWidth; // Force reflow
         this.gameOverScreen.classList.add('visible');
 
-        // Hide HUD
+        // Hide HUD and quick restart
         this.hud.classList.add('hidden');
+        this.quickRestartBtn.classList.add('hidden');
 
         // Fetch leaderboard info for game over (read-only)
         this.leaderboard.render(this.gameOverLeaderboard);
